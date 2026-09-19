@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
+import { calculateTLaterLoan } from '@tech-vibe/utils';
 
 const prisma = new PrismaClient();
 
@@ -47,64 +48,24 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
     const { amount, tenorMonths } = request.body as any;
     const principal = parseFloat(amount);
 
-    if (tenorMonths !== 1 && tenorMonths !== 3) {
-      return reply.badRequest('Invalid tenor, must be 1 or 3 months');
-    }
-
-    let adminFee = 0;
-    let interestRate = 0;
-    let totalInterest = 0;
-    let totalLoanAmount = 0;
-    let installments = [];
-
-    if (tenorMonths === 1) {
-      adminFee = principal * 0.01; // 1% admin
-      totalLoanAmount = principal + adminFee;
-      
-      installments.push({
-        installmentNumber: 1,
-        principalDue: principal,
-        interestDue: 0,
-        totalDue: totalLoanAmount
-      });
-    } else if (tenorMonths === 3) {
-      interestRate = 2.5; // 2.5% per month
-      adminFee = 15000;
-      totalInterest = principal * (interestRate / 100) * 3;
-      totalLoanAmount = principal + totalInterest + adminFee;
-
-      const monthlyInstallment = Math.round((totalLoanAmount / 3) * 100) / 100;
-      let accumulated = 0;
-
-      for (let i = 1; i <= 3; i++) {
-        let installmentAmount = monthlyInstallment;
-        
-        // Adjust last installment for rounding differences
-        if (i === 3) {
-          installmentAmount = totalLoanAmount - accumulated;
+    try {
+      const result = calculateTLaterLoan(principal, tenorMonths);
+      return {
+        data: {
+          principal: result.principal,
+          tenorMonths: result.tenorMonths,
+          adminFee: result.adminFee,
+          totalInterest: result.totalInterest,
+          totalLoanAmount: result.totalLoanAmount,
+          installments: result.installments
         }
-        
-        installments.push({
-          installmentNumber: i,
-          principalDue: principal / 3, // simplified
-          interestDue: totalInterest / 3, // simplified
-          totalDue: Math.round(installmentAmount * 100) / 100
-        });
-        
-        accumulated += monthlyInstallment;
+      };
+    } catch (err: any) {
+      if (err.message.includes('Invalid tenor')) {
+        return reply.badRequest(err.message);
       }
+      throw err;
     }
-
-    return {
-      data: {
-        principal,
-        tenorMonths,
-        adminFee,
-        totalInterest,
-        totalLoanAmount,
-        installments
-      }
-    };
   });
 
   fastify.post('/tlater/repay', {
@@ -226,22 +187,9 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
         if (account.status !== 'active') throw new Error('ACCOUNT_NOT_ACTIVE');
         if (parseFloat(account.available_limit) < amount) throw new Error('INSUFFICIENT_LIMIT');
 
-        // Calculate fees
-        let adminFee = 0;
-        let interestRate = 0;
-        let totalInterest = 0;
-        let totalLoanAmount = 0;
-
-        if (tenorMonths === 1) {
-          adminFee = amount * 0.01;
-          totalLoanAmount = amount + adminFee;
-        } else if (tenorMonths === 3) {
-          interestRate = 2.5;
-          adminFee = 15000;
-          totalInterest = amount * (interestRate / 100) * 3;
-          totalLoanAmount = amount + totalInterest + adminFee;
-        }
-
+        // Calculate fees and installments using utility
+        const calcResult = calculateTLaterLoan(amount, tenorMonths);
+        
         // Deduct limit
         await tx.tlaterAccount.update({
           where: { id: BigInt(account.id) },
@@ -255,56 +203,31 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
             orderId: BigInt(orderId),
             loanCode: `LOAN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             principalAmount: amount,
-            adminFee,
-            interestRate,
-            totalInterest,
-            totalLoanAmount,
+            adminFee: calcResult.adminFee,
+            interestRate: calcResult.interestRate,
+            totalInterest: calcResult.totalInterest,
+            totalLoanAmount: calcResult.totalLoanAmount,
             tenorMonths,
             status: 'active'
           }
         });
 
         // Create Installments
-        const installmentsToCreate = [];
-        const date = new Date();
-        
-        if (tenorMonths === 1) {
-          date.setDate(date.getDate() + 30);
-          installmentsToCreate.push({
+        const installmentsToCreate = calcResult.installments.map(inst => {
+          const dueDate = new Date();
+          // Adding ~30 days per installment number for simplification
+          dueDate.setDate(dueDate.getDate() + (30 * inst.installmentNumber));
+          
+          return {
             loanId: newLoan.id,
-            installmentNumber: 1,
-            principalDue: amount,
-            interestDue: 0,
-            totalDue: totalLoanAmount,
-            dueDate: date,
+            installmentNumber: inst.installmentNumber,
+            principalDue: inst.principalDue,
+            interestDue: inst.interestDue,
+            totalDue: inst.totalDue,
+            dueDate: dueDate,
             status: 'unpaid'
-          });
-        } else {
-          const monthlyInstallment = Math.round((totalLoanAmount / 3) * 100) / 100;
-          let accumulated = 0;
-
-          for (let i = 1; i <= 3; i++) {
-            const installmentDate = new Date(date);
-            installmentDate.setMonth(installmentDate.getMonth() + i);
-            
-            let installmentAmount = monthlyInstallment;
-            if (i === 3) {
-              installmentAmount = totalLoanAmount - accumulated;
-            }
-            
-            installmentsToCreate.push({
-              loanId: newLoan.id,
-              installmentNumber: i,
-              principalDue: amount / 3,
-              interestDue: totalInterest / 3,
-              totalDue: Math.round(installmentAmount * 100) / 100,
-              dueDate: installmentDate,
-              status: 'unpaid'
-            });
-            
-            accumulated += monthlyInstallment;
-          }
-        }
+          };
+        });
 
         // @ts-ignore
         await tx.tlaterInstallment.createMany({ data: installmentsToCreate });

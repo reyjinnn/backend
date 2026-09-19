@@ -8,7 +8,6 @@ declare module 'fastify' {
 }
 
 const authPlugin: FastifyPluginAsync = async (fastify) => {
-  // Since API Gateway handles JWT and passes x-user-id, we just check this header
   fastify.decorate('verifyAuth', async (request: any, reply: any) => {
     const userId = request.headers['x-user-id'];
     const role = request.headers['x-user-role'];

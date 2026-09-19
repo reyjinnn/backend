@@ -9,7 +9,6 @@ declare module 'fastify' {
 }
 
 const authPlugin: FastifyPluginAsync = async (fastify) => {
-  // Mocked Admin verification
   fastify.decorate('verifyAdmin', async (request: any, reply: any) => {
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -17,13 +16,11 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
     }
     const token = authHeader.split(' ')[1];
     
-    // In a real app, verify JWT and check role. We mock it for Sprint 2.
     if (token !== 'mock-admin-token') {
       return reply.forbidden('Requires admin privileges');
     }
   });
 
-  // Internal API Key verification
   fastify.decorate('verifyInternalApiKey', async (request: any, reply: any) => {
     const apiKey = request.headers['x-internal-api-key'];
     const expectedKey = process.env.INTERNAL_API_KEY || 'default-internal-secret';
