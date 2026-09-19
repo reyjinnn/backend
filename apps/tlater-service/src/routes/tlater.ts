@@ -1,0 +1,326 @@
+import { FastifyPluginAsync } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { PrismaClient } from '@tech-vibe/database';
+
+const prisma = new PrismaClient();
+
+const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
+  
+  // ===========================================================================
+  // PUBLIC ENDPOINTS
+  // ===========================================================================
+
+  fastify.get('/tlater/account', {
+    preHandler: fastify.verifyAuth
+  }, async (request, reply) => {
+    const { id: userId } = (request as any).user;
+
+    const account = await prisma.tlaterAccount.findUnique({
+      where: { userId: BigInt(userId) }
+    });
+
+    if (!account) {
+      return reply.notFound('TLater account not found');
+    }
+
+    return {
+      data: {
+        id: account.id.toString(),
+        userId: account.userId.toString(),
+        creditLimit: account.creditLimit.toString(),
+        availableLimit: account.availableLimit.toString(),
+        status: account.status,
+        interestRateMonthly: account.interestRateMonthly.toString(),
+        lateFeeDaily: account.lateFeeDaily.toString()
+      }
+    };
+  });
+
+  fastify.post('/tlater/simulate', {
+    schema: {
+      body: Type.Object({
+        amount: Type.String(),
+        tenorMonths: Type.Number()
+      })
+    }
+  }, async (request, reply) => {
+    const { amount, tenorMonths } = request.body as any;
+    const principal = parseFloat(amount);
+
+    if (tenorMonths !== 1 && tenorMonths !== 3) {
+      return reply.badRequest('Invalid tenor, must be 1 or 3 months');
+    }
+
+    let adminFee = 0;
+    let interestRate = 0;
+    let totalInterest = 0;
+    let totalLoanAmount = 0;
+    let installments = [];
+
+    if (tenorMonths === 1) {
+      adminFee = principal * 0.01; // 1% admin
+      totalLoanAmount = principal + adminFee;
+      
+      installments.push({
+        installmentNumber: 1,
+        principalDue: principal,
+        interestDue: 0,
+        totalDue: totalLoanAmount
+      });
+    } else if (tenorMonths === 3) {
+      interestRate = 2.5; // 2.5% per month
+      adminFee = 15000;
+      totalInterest = principal * (interestRate / 100) * 3;
+      totalLoanAmount = principal + totalInterest + adminFee;
+
+      const monthlyInstallment = Math.round((totalLoanAmount / 3) * 100) / 100;
+      let accumulated = 0;
+
+      for (let i = 1; i <= 3; i++) {
+        let installmentAmount = monthlyInstallment;
+        
+        // Adjust last installment for rounding differences
+        if (i === 3) {
+          installmentAmount = totalLoanAmount - accumulated;
+        }
+        
+        installments.push({
+          installmentNumber: i,
+          principalDue: principal / 3, // simplified
+          interestDue: totalInterest / 3, // simplified
+          totalDue: Math.round(installmentAmount * 100) / 100
+        });
+        
+        accumulated += monthlyInstallment;
+      }
+    }
+
+    return {
+      data: {
+        principal,
+        tenorMonths,
+        adminFee,
+        totalInterest,
+        totalLoanAmount,
+        installments
+      }
+    };
+  });
+
+  fastify.post('/tlater/repay', {
+    preHandler: fastify.verifyAuth,
+    schema: {
+      body: Type.Object({
+        installmentId: Type.String(),
+        amount: Type.String()
+      })
+    }
+  }, async (request, reply) => {
+    const { installmentId, amount } = request.body as any;
+    const paymentAmount = parseFloat(amount);
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Lock installment
+        const installments: any[] = await tx.$queryRaw`
+          SELECT id, loan_id, principal_due, total_due, total_paid, status 
+          FROM tlater_installments 
+          WHERE id = ${BigInt(installmentId)} FOR UPDATE
+        `;
+
+        if (installments.length === 0) throw new Error('INSTALLMENT_NOT_FOUND');
+        const installment = installments[0];
+
+        if (installment.status === 'paid') throw new Error('ALREADY_PAID');
+
+        const newTotalPaid = parseFloat(installment.total_paid) + paymentAmount;
+        const requiredAmount = parseFloat(installment.total_due);
+        const isFullyPaid = newTotalPaid >= requiredAmount;
+
+        // Update installment
+        await tx.tlaterInstallment.update({
+          where: { id: BigInt(installmentId) },
+          data: {
+            totalPaid: newTotalPaid,
+            status: isFullyPaid ? 'paid' : 'partially_paid',
+            paidAt: isFullyPaid ? new Date() : null
+          }
+        });
+
+        // Create repayment record
+        const repayment = await tx.tlaterRepayment.create({
+          data: {
+            installmentId: BigInt(installmentId),
+            paymentReference: `REP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            amount: paymentAmount
+          }
+        });
+
+        // If installment is fully paid, restore available limit by principal due
+        if (isFullyPaid) {
+          const loan = await tx.tlaterLoan.findUnique({ where: { id: BigInt(installment.loan_id) } });
+          if (loan) {
+            await tx.tlaterAccount.update({
+              where: { id: loan.accountId },
+              data: { availableLimit: { increment: parseFloat(installment.principal_due) } }
+            });
+
+            // Check if all installments are paid
+            const remainingInstallments = await tx.tlaterInstallment.count({
+              where: { loanId: loan.id, status: { not: 'paid' } }
+            });
+
+            if (remainingInstallments === 0) {
+              await tx.tlaterLoan.update({
+                where: { id: loan.id },
+                data: { status: 'fully_paid' }
+              });
+            }
+          }
+        }
+
+        return repayment;
+      });
+
+      return { data: { message: 'Repayment successful', repaymentId: result.id.toString() } };
+    } catch (err: any) {
+      if (err.message === 'INSTALLMENT_NOT_FOUND') return reply.notFound('Installment not found');
+      if (err.message === 'ALREADY_PAID') return reply.conflict('Installment already paid');
+      throw err;
+    }
+  });
+
+  // ===========================================================================
+  // INTERNAL ENDPOINTS
+  // ===========================================================================
+
+  fastify.post('/internal/tlater/disburse', {
+    preHandler: fastify.verifyInternalApiKey,
+    schema: {
+      body: Type.Object({
+        userId: Type.String(),
+        orderId: Type.String(),
+        principalAmount: Type.String(),
+        tenorMonths: Type.Number()
+      })
+    }
+  }, async (request, reply) => {
+    const { userId, orderId, principalAmount, tenorMonths } = request.body as any;
+    const amount = parseFloat(principalAmount);
+
+    if (tenorMonths !== 1 && tenorMonths !== 3) {
+      return reply.badRequest('Invalid tenor, must be 1 or 3 months');
+    }
+
+    try {
+      const loan = await prisma.$transaction(async (tx) => {
+        // Lock account
+        const accounts: any[] = await tx.$queryRaw`
+          SELECT id, available_limit, status FROM tlater_accounts 
+          WHERE user_id = ${BigInt(userId)} FOR UPDATE
+        `;
+
+        if (accounts.length === 0) throw new Error('ACCOUNT_NOT_FOUND');
+        const account = accounts[0];
+
+        if (account.status !== 'active') throw new Error('ACCOUNT_NOT_ACTIVE');
+        if (parseFloat(account.available_limit) < amount) throw new Error('INSUFFICIENT_LIMIT');
+
+        // Calculate fees
+        let adminFee = 0;
+        let interestRate = 0;
+        let totalInterest = 0;
+        let totalLoanAmount = 0;
+
+        if (tenorMonths === 1) {
+          adminFee = amount * 0.01;
+          totalLoanAmount = amount + adminFee;
+        } else if (tenorMonths === 3) {
+          interestRate = 2.5;
+          adminFee = 15000;
+          totalInterest = amount * (interestRate / 100) * 3;
+          totalLoanAmount = amount + totalInterest + adminFee;
+        }
+
+        // Deduct limit
+        await tx.tlaterAccount.update({
+          where: { id: BigInt(account.id) },
+          data: { availableLimit: { decrement: amount } }
+        });
+
+        // Create Loan
+        const newLoan = await tx.tlaterLoan.create({
+          data: {
+            accountId: BigInt(account.id),
+            orderId: BigInt(orderId),
+            loanCode: `LOAN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            principalAmount: amount,
+            adminFee,
+            interestRate,
+            totalInterest,
+            totalLoanAmount,
+            tenorMonths,
+            status: 'active'
+          }
+        });
+
+        // Create Installments
+        const installmentsToCreate = [];
+        const date = new Date();
+        
+        if (tenorMonths === 1) {
+          date.setDate(date.getDate() + 30);
+          installmentsToCreate.push({
+            loanId: newLoan.id,
+            installmentNumber: 1,
+            principalDue: amount,
+            interestDue: 0,
+            totalDue: totalLoanAmount,
+            dueDate: date,
+            status: 'unpaid'
+          });
+        } else {
+          const monthlyInstallment = Math.round((totalLoanAmount / 3) * 100) / 100;
+          let accumulated = 0;
+
+          for (let i = 1; i <= 3; i++) {
+            const installmentDate = new Date(date);
+            installmentDate.setMonth(installmentDate.getMonth() + i);
+            
+            let installmentAmount = monthlyInstallment;
+            if (i === 3) {
+              installmentAmount = totalLoanAmount - accumulated;
+            }
+            
+            installmentsToCreate.push({
+              loanId: newLoan.id,
+              installmentNumber: i,
+              principalDue: amount / 3,
+              interestDue: totalInterest / 3,
+              totalDue: Math.round(installmentAmount * 100) / 100,
+              dueDate: installmentDate,
+              status: 'unpaid'
+            });
+            
+            accumulated += monthlyInstallment;
+          }
+        }
+
+        // @ts-ignore
+        await tx.tlaterInstallment.createMany({ data: installmentsToCreate });
+
+        return newLoan;
+      });
+
+      return { data: { message: 'Loan disbursed successfully', loanId: loan.id.toString() } };
+    } catch (err: any) {
+      if (err.message === 'ACCOUNT_NOT_FOUND') return reply.notFound('TLater account not found');
+      if (err.message === 'ACCOUNT_NOT_ACTIVE') return reply.forbidden('TLater account is not active');
+      if (err.message === 'INSUFFICIENT_LIMIT') return reply.conflict('Insufficient credit limit');
+      throw err;
+    }
+  });
+
+};
+
+export default tlaterRoutes;
