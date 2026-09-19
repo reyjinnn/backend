@@ -243,6 +243,7 @@ model PointLedger {
   referenceId    String?           @map("reference_id") @db.VarChar(100)
   description    String            @db.VarChar(255)
   expiresAt      DateTime?         @map("expires_at")
+  status         LedgerStatus      @default(completed)
   createdAt      DateTime          @default(now()) @map("created_at")
 
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -262,6 +263,12 @@ enum LedgerReferenceType {
   manual_adjustment
   expired
   refund
+}
+
+enum LedgerStatus {
+  pending
+  completed
+  cancelled
 }
 
 // ----------------------------------------------------------------------------
