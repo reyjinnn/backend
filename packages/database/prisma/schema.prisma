@@ -1,0 +1,362 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// 1. IDENTITAS & KYC
+// ----------------------------------------------------------------------------
+model User {
+  id             BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  name           String        @db.VarChar(150)
+  email          String        @unique @db.VarChar(150)
+  phone          String        @unique @db.VarChar(25)
+  password_hash  String        @db.VarChar(255)
+  role           Role          @default(customer)
+  status         UserStatus    @default(active)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at")
+  
+  profile        UserProfile?
+  pointWallet    PointWallet?
+  pointLedgers   PointLedger[]
+  tlaterAccount  TlaterAccount?
+  orders         Order[]
+
+  @@map("users")
+}
+
+enum Role {
+  customer
+  admin
+  superadmin
+}
+
+enum UserStatus {
+  active
+  suspended
+  banned
+}
+
+model UserProfile {
+  userId           BigInt       @id @db.UnsignedBigInt @map("user_id")
+  nik              String?      @unique @db.VarChar(16)
+  dateOfBirth      DateTime?    @map("date_of_birth") @db.Date
+  address          String?      @db.Text
+  ktpImageUr       String?      @map("ktp_image_url") @db.VarChar(255)
+  selfieImageUr    String?      @map("selfie_image_url") @db.VarChar(255)
+  kycStatus        KycStatus    @default(unverified) @map("kyc_status")
+  kycVerifiedAt    DateTime?    @map("kyc_verified_at")
+  rejectionReason  String?      @map("rejection_reason") @db.VarChar(255)
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+enum KycStatus {
+  unverified
+  pending
+  verified
+  rejected
+}
+
+// ----------------------------------------------------------------------------
+// 2. KATALOG & INVENTORI (DENGAN ISOLASI STOK)
+// ----------------------------------------------------------------------------
+model Category {
+  id          Int        @id @default(autoincrement()) @db.UnsignedInt
+  name        String     @db.VarChar(100)
+  slug        String     @unique @db.VarChar(120)
+  description String?    @db.Text
+  parentId    Int?       @map("parent_id") @db.UnsignedInt
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  parent      Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryToCategory")
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id           BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  categoryId   Int           @map("category_id") @db.UnsignedInt
+  sku          String        @unique @db.VarChar(64)
+  name         String        @db.VarChar(255)
+  slug         String        @unique @db.VarChar(255)
+  description  String?       @db.LongText
+  price        Decimal       @db.Decimal(14, 2)
+  weightGrams  Int           @default(1000) @map("weight_grams") @db.UnsignedInt
+  status       ProductStatus @default(draft)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  category     Category      @relation(fields: [categoryId], references: [id])
+  stock        ProductStock?
+  images       ProductImage[]
+  orderItems   OrderItem[]
+
+  @@map("products")
+}
+
+enum ProductStatus {
+  draft
+  active
+  archived
+}
+
+model ProductStock {
+  productId     BigInt   @id @map("product_id") @db.UnsignedBigInt
+  stock         Int      @default(0) @db.UnsignedInt
+  reservedStock Int      @default(0) @map("reserved_stock") @db.UnsignedInt
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_stocks")
+}
+
+model ProductImage {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  productId  BigInt   @map("product_id") @db.UnsignedBigInt
+  imageUrl   String   @map("image_url") @db.VarChar(255)
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  sortOrder  Int      @default(0) @map("sort_order") @db.SmallInt
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+// ----------------------------------------------------------------------------
+// 3. ORDERS, ITEMS, & SPLIT PAYMENT
+// ----------------------------------------------------------------------------
+model Order {
+  id               BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  orderNumber      String      @unique @map("order_number") @db.VarChar(50)
+  userId           BigInt      @map("user_id") @db.UnsignedBigInt
+  totalItemAmount  Decimal     @map("total_item_amount") @db.Decimal(14, 2)
+  shippingFee      Decimal     @default(0.00) @map("shipping_fee") @db.Decimal(14, 2)
+  discountAmount   Decimal     @default(0.00) @map("discount_amount") @db.Decimal(14, 2)
+  grandTotal       Decimal     @map("grand_total") @db.Decimal(14, 2)
+  status           OrderStatus @default(pending)
+  shippingAddress  String      @map("shipping_address") @db.Text
+  trackingNumber   String?     @map("tracking_number") @db.VarChar(100)
+  notes            String?     @db.Text
+  paidAt           DateTime?   @map("paid_at")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  user             User            @relation(fields: [userId], references: [id])
+  items            OrderItem[]
+  payments         OrderPayment[]
+  tlaterLoan       TlaterLoan?
+
+  @@map("orders")
+}
+
+enum OrderStatus {
+  pending
+  paid
+  processing
+  shipped
+  completed
+  cancelled
+  refunded
+}
+
+model OrderItem {
+  id                  BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  orderId             BigInt   @map("order_id") @db.UnsignedBigInt
+  productId           BigInt   @map("product_id") @db.UnsignedBigInt
+  productNameSnapshot String   @map("product_name_snapshot") @db.VarChar(255)
+  priceSnapshot       Decimal  @map("price_snapshot") @db.Decimal(14, 2)
+  quantity            Int      @db.UnsignedInt
+  subtotal            Decimal  @db.Decimal(14, 2)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product             Product  @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderPayment {
+  id             BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  orderId        BigInt        @map("order_id") @db.UnsignedBigInt
+  paymentMethod  PaymentMethod @map("payment_method")
+  amount         Decimal       @db.Decimal(14, 2)
+  status         PaymentStatus @default(pending)
+  referenceId    String?       @map("reference_id") @db.VarChar(100)
+  settledAt      DateTime?     @map("settled_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_payments")
+}
+
+enum PaymentMethod {
+  gateway_cash
+  point
+  tlater
+}
+
+enum PaymentStatus {
+  pending
+  settled
+  failed
+  refunded
+}
+
+// ----------------------------------------------------------------------------
+// 4. DOMPET & BUKU KAS POIN LOYALITAS
+// ----------------------------------------------------------------------------
+model PointWallet {
+  userId         BigInt   @id @map("user_id") @db.UnsignedBigInt
+  balance        BigInt   @default(0) @db.UnsignedBigInt
+  lockedBalance  BigInt   @default(0) @map("locked_balance") @db.UnsignedBigInt
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("point_wallets")
+}
+
+model PointLedger {
+  id             BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  userId         BigInt            @map("user_id") @db.UnsignedBigInt
+  idempotencyKey String            @unique @map("idempotency_key") @db.VarChar(100)
+  type           LedgerType
+  amount         BigInt            @db.UnsignedBigInt
+  balanceAfter   BigInt            @map("balance_after") @db.UnsignedBigInt
+  referenceType  LedgerReferenceType @map("reference_type")
+  referenceId    String?           @map("reference_id") @db.VarChar(100)
+  description    String            @db.VarChar(255)
+  expiresAt      DateTime?         @map("expires_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("point_ledgers")
+}
+
+enum LedgerType {
+  credit
+  debit
+}
+
+enum LedgerReferenceType {
+  order_reward
+  order_redemption
+  manual_adjustment
+  expired
+  refund
+}
+
+// ----------------------------------------------------------------------------
+// 5. ENGINE TLATER (PAYLATER, LOANS, INSTALLMENTS)
+// ----------------------------------------------------------------------------
+model TlaterAccount {
+  id                  BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  userId              BigInt        @unique @map("user_id") @db.UnsignedBigInt
+  creditLimit         Decimal       @default(0.00) @map("credit_limit") @db.Decimal(14, 2)
+  availableLimit      Decimal       @default(0.00) @map("available_limit") @db.Decimal(14, 2)
+  interestRateMonthly Decimal       @default(2.50) @map("interest_rate_monthly") @db.Decimal(5, 2)
+  lateFeeDaily        Decimal       @default(0.10) @map("late_fee_daily") @db.Decimal(5, 2)
+  status              TlaterStatus  @default(pending_kyc)
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loans               TlaterLoan[]
+
+  @@map("tlater_accounts")
+}
+
+enum TlaterStatus {
+  pending_kyc
+  active
+  suspended
+  blocked
+}
+
+model TlaterLoan {
+  id               BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  accountId        BigInt         @map("account_id") @db.UnsignedBigInt
+  orderId          BigInt         @unique @map("order_id") @db.UnsignedBigInt
+  loanCode         String         @unique @map("loan_code") @db.VarChar(50)
+  principalAmount  Decimal        @map("principal_amount") @db.Decimal(14, 2)
+  adminFee         Decimal        @default(0.00) @map("admin_fee") @db.Decimal(14, 2)
+  interestRate     Decimal        @map("interest_rate") @db.Decimal(5, 2)
+  totalInterest    Decimal        @map("total_interest") @db.Decimal(14, 2)
+  totalLoanAmount  Decimal        @map("total_loan_amount") @db.Decimal(14, 2)
+  tenorMonths      Int            @default(1) @map("tenor_months") @db.UnsignedTinyInt
+  status           LoanStatus     @default(active)
+  disbursedAt      DateTime       @default(now()) @map("disbursed_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  account          TlaterAccount  @relation(fields: [accountId], references: [id])
+  order            Order          @relation(fields: [orderId], references: [id])
+  installments     TlaterInstallment[]
+
+  @@map("tlater_loans")
+}
+
+enum LoanStatus {
+  active
+  fully_paid
+  defaulted
+}
+
+model TlaterInstallment {
+  id               BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  loanId           BigInt             @map("loan_id") @db.UnsignedBigInt
+  installmentNumber Int               @map("installment_number") @db.UnsignedTinyInt
+  principalDue     Decimal            @map("principal_due") @db.Decimal(14, 2)
+  interestDue      Decimal            @map("interest_due") @db.Decimal(14, 2)
+  lateFee          Decimal            @default(0.00) @map("late_fee") @db.Decimal(14, 2)
+  totalDue         Decimal            @map("total_due") @db.Decimal(14, 2)
+  totalPaid        Decimal            @default(0.00) @map("total_paid") @db.Decimal(14, 2)
+  dueDate          DateTime           @map("due_date") @db.Date
+  status           InstallmentStatus  @default(unpaid)
+  paidAt           DateTime?          @map("paid_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @default(now()) @updatedAt @map("updated_at")
+
+  loan             TlaterLoan         @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  repayments       TlaterRepayment[]
+
+  @@index([dueDate, status])
+  @@map("tlater_installments")
+}
+
+enum InstallmentStatus {
+  unpaid
+  partially_paid
+  paid
+  overdue
+}
+
+model TlaterRepayment {
+  id               BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  installmentId    BigInt             @map("installment_id") @db.UnsignedBigInt
+  paymentReference String             @unique @map("payment_reference") @db.VarChar(100)
+  amount           Decimal            @db.Decimal(14, 2)
+  paidAt           DateTime           @default(now()) @map("paid_at")
+
+  installment      TlaterInstallment  @relation(fields: [installmentId], references: [id])
+
+  @@map("tlater_repayments")
+}

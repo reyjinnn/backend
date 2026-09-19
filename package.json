@@ -1,0 +1,23 @@
+{
+  "name": "tech-vibe-core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tech Vibe Core Engine",
+  "packageManager": "npm@11.19.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "start": "docker compose -f docker/docker-compose.yml up -d",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0",
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0"
+  }
+}
