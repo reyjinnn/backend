@@ -321,6 +321,61 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  fastify.post('/internal/tlater/cancel-loan', {
+    preHandler: fastify.verifyInternalApiKey,
+    schema: {
+      body: Type.Object({
+        orderId: Type.String()
+      })
+    }
+  }, async (request, reply) => {
+    const { orderId } = request.body as any;
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Find active loan for this order
+        const loan = await tx.tlaterLoan.findUnique({
+          where: { orderId: BigInt(orderId) }
+        });
+
+        if (!loan || loan.status !== 'active') {
+          throw new Error('LOAN_NOT_CANCELLABLE');
+        }
+
+        // Lock account to restore limit
+        const accounts: any[] = await tx.$queryRaw`
+          SELECT id, available_limit FROM tlater_accounts 
+          WHERE id = ${loan.accountId} FOR UPDATE
+        `;
+
+        if (accounts.length > 0) {
+          // Restore available limit
+          await tx.tlaterAccount.update({
+            where: { id: loan.accountId },
+            data: { availableLimit: { increment: loan.principalAmount } }
+          });
+        }
+
+        // Delete unpaid installments
+        await tx.tlaterInstallment.deleteMany({
+          where: { loanId: loan.id, status: 'unpaid' }
+        });
+
+        // Delete the loan
+        await tx.tlaterLoan.delete({
+          where: { id: loan.id }
+        });
+      });
+
+      return { success: true, message: 'TLater loan cancelled successfully' };
+    } catch (err: any) {
+      if (err.message === 'LOAN_NOT_CANCELLABLE') {
+        return reply.badRequest('Loan not found or already processed');
+      }
+      throw err;
+    }
+  });
+
 };
 
 export default tlaterRoutes;
