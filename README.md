@@ -120,3 +120,5 @@ Each microservice adheres to strict engineering standards:
 3. **Automated Testing:** 80% coverage on financial and inventory logic.
 4. **Idempotency:** Financial mutations guarantee exactly-once processing using `Idempotency-Key`.
 5. **Docker Ready:** Multi-stage `Dockerfile` available for production deployment.
+
+&copy; 2026 reyjinnn. All rights reserved.
