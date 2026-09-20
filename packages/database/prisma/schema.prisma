@@ -104,6 +104,8 @@ model Product {
   originalPrice Decimal?     @map("original_price") @db.Decimal(14, 2)
   weightGrams  Int           @default(1000) @map("weight_grams") @db.UnsignedInt
   status       ProductStatus @default(draft)
+  ratingAvg    Decimal?      @map("rating_avg") @db.Decimal(3, 2)
+  reviewCount  Int?          @default(0) @map("review_count") @db.UnsignedInt
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @default(now()) @updatedAt @map("updated_at")
 
@@ -139,7 +141,7 @@ model ProductImage {
   productId  BigInt   @map("product_id") @db.UnsignedBigInt
   imageUrl   String   @map("image_url") @db.VarChar(255)
   isPrimary  Boolean  @default(false) @map("is_primary")
-  sortOrder  Int      @default(0) @map("sort_order") @db.SmallInt
+  sortOrder  Int      @default(0) @map("sort_order") @db.UnsignedSmallInt
   createdAt  DateTime @default(now()) @map("created_at")
 
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -339,6 +341,7 @@ enum LoanStatus {
   active
   fully_paid
   defaulted
+  cancelled
 }
 
 model TlaterInstallment {

@@ -5,7 +5,8 @@ import { logger } from '@tech-vibe/logger';
 import authPlugin from './plugins/auth';
 import catalogRoutes from './routes/catalog';
 import internalStocksRoutes from './routes/internal-stocks';
-
+import wishlistRoutes from './routes/wishlist';
+import reviewRoutes from './routes/reviews';
 const buildServer = async () => {
   const fastify = Fastify({
     logger: false, // We'll use our custom logger or disable default to keep logs clean
@@ -18,7 +19,8 @@ const buildServer = async () => {
   // Register routes
   await fastify.register(catalogRoutes);
   await fastify.register(internalStocksRoutes);
-
+  await fastify.register(wishlistRoutes);
+  await fastify.register(reviewRoutes);
   return fastify;
 };
 

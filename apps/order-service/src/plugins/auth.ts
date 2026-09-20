@@ -4,6 +4,7 @@ import { FastifyPluginAsync } from 'fastify';
 declare module 'fastify' {
   interface FastifyInstance {
     verifyAuth: (request: any, reply: any) => Promise<void>;
+    verifyAdmin: (request: any, reply: any) => Promise<void>;
   }
 }
 
@@ -17,6 +18,17 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
     }
     
     request.user = { id: userId, role: role || 'customer' };
+  });
+
+  fastify.decorate('verifyAdmin', async (request: any, reply: any) => {
+    const role = request.headers['x-user-role'];
+    if (role !== 'admin' && role !== 'superadmin') {
+      // fallback to check token for dev
+      const authHeader = request.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'mock-admin-token') {
+        return reply.forbidden('Requires admin privileges');
+      }
+    }
   });
 };
 

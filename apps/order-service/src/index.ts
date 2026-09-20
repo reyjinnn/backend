@@ -6,7 +6,7 @@ import authPlugin from './plugins/auth';
 import cartRoutes from './routes/cart';
 import checkoutRoutes from './routes/checkout';
 import promoRoutes from './routes/promos';
-
+import shipmentRoutes from './routes/shipments';
 const buildServer = async () => {
   const fastify = Fastify({
     logger: false, // Custom logger used
@@ -20,6 +20,7 @@ const buildServer = async () => {
   await fastify.register(cartRoutes);
   await fastify.register(checkoutRoutes);
   await fastify.register(promoRoutes);
+  await fastify.register(shipmentRoutes);
 
   return fastify;
 };

@@ -5,6 +5,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     verifyAdmin: (request: any, reply: any) => Promise<void>;
     verifyInternalApiKey: (request: any, reply: any) => Promise<void>;
+    verifyAuth: (request: any, reply: any) => Promise<void>;
   }
 }
 
@@ -28,6 +29,17 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
     if (!apiKey || apiKey !== expectedKey) {
       return reply.unauthorized('Invalid internal API key');
     }
+  });
+
+  fastify.decorate('verifyAuth', async (request: any, reply: any) => {
+    const userId = request.headers['x-user-id'];
+    const role = request.headers['x-user-role'];
+    
+    if (!userId) {
+      return reply.unauthorized('Missing x-user-id header from API Gateway');
+    }
+    
+    request.user = { id: userId, role: role || 'customer' };
   });
 };
 
