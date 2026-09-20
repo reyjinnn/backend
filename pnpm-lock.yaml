@@ -26,6 +26,9 @@ importers:
       '@fastify/cors':
         specifier: ^11.3.0
         version: 11.3.0
+      '@fastify/csrf-protection':
+        specifier: ^8.0.1
+        version: 8.0.1
       '@fastify/helmet':
         specifier: ^13.1.1
         version: 13.1.1
@@ -403,6 +406,12 @@ packages:
 
   '@fastify/cors@11.3.0':
     resolution: {integrity: sha512-ggQGua+xHv1MvePbPr0v//xLYEsCXbWspquXCJS9Ot5YoRXq8J8ZWzHnxDBVnbtXosvistXo6LtNzOJswf64Fw==}
+
+  '@fastify/csrf-protection@8.0.1':
+    resolution: {integrity: sha512-NMK+TKyuWCmRJPwSiAVTQwKoeDspWRhoBgYtumJJy0PBZxjgcUAn1eCO8r5N/z0pgDMcMfy5HjxowXpOxwTWyw==}
+
+  '@fastify/csrf@8.1.0':
+    resolution: {integrity: sha512-vUNZy11syr4mYI+5AqWZOLyYZXPMCYNGHw0Ww8tlmPnwSNWyTYKadKX6XveD5vaiENclcGkvaSnUZZQDRzpOhw==}
 
   '@fastify/error@4.2.0':
     resolution: {integrity: sha512-RSo3sVDXfHskiBZKBPRgnQTtIqpi/7zhJOEmAxCiBcM7d0uwdGdxLlsCaLzGs8v8NnxIRlfG0N51p5yFaOentQ==}
@@ -1607,6 +1616,14 @@ snapshots:
     dependencies:
       fastify-plugin: 6.0.0
       toad-cache: 3.7.4
+
+  '@fastify/csrf-protection@8.0.1':
+    dependencies:
+      '@fastify/csrf': 8.1.0
+      '@fastify/error': 4.2.0
+      fastify-plugin: 6.0.0
+
+  '@fastify/csrf@8.1.0': {}
 
   '@fastify/error@4.2.0': {}
 
