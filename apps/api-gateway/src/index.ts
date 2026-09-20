@@ -82,7 +82,19 @@ const buildServer = async () => {
   await server.register(proxy, {
     upstream: process.env.ORDER_SERVICE_URL || "http://localhost:3003",
     prefix: "/api/v1/orders",
-    rewritePrefix: "/api/v1",
+    rewritePrefix: "/orders",
+  });
+
+  await server.register(proxy, {
+    upstream: process.env.ORDER_SERVICE_URL || "http://localhost:3003",
+    prefix: "/api/v1/promos",
+    rewritePrefix: "/promos",
+  });
+
+  await server.register(proxy, {
+    upstream: process.env.ORDER_SERVICE_URL || "http://localhost:3003",
+    prefix: "/api/v1/admin/promos",
+    rewritePrefix: "/admin/promos",
   });
 
   await server.register(proxy, {

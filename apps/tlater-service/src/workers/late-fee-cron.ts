@@ -32,7 +32,7 @@ export const initLateFeeCron = () => {
 
       for (const installment of overdueInstallments) {
         try {
-          await prisma.$transaction(async (tx) => {
+          await prisma.$transaction(async (tx: any) => {
             // Lock installment
             const lockedInstallments: any[] = await tx.$queryRaw`
               SELECT id, principal_due, status FROM tlater_installments 

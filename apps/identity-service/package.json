@@ -17,9 +17,9 @@
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/type-provider-typebox": "^5.0.0",
     "@sinclair/typebox": "^0.33.0",
-    "@tech-vibe/database": "*",
-    "@tech-vibe/logger": "*",
-    "@tech-vibe/utils": "*",
+    "@tech-vibe/database": "workspace:*",
+    "@tech-vibe/logger": "workspace:*",
+    "@tech-vibe/utils": "workspace:*",
     "argon2": "^0.40.1",
     "fastify": "^5.0.0"
   },

@@ -27,6 +27,13 @@ model User {
   tlaterAccount  TlaterAccount?
   orders         Order[]
 
+  addresses      UserAddress[]
+  wishlists      Wishlist[]
+  reviews        ProductReview[]
+  promoUsages    UserPromoUsage[]
+  tickets        SupportTicket[]
+  notifications  Notification[]
+
   @@map("users")
 }
 
@@ -94,6 +101,7 @@ model Product {
   slug         String        @unique @db.VarChar(255)
   description  String?       @db.LongText
   price        Decimal       @db.Decimal(14, 2)
+  originalPrice Decimal?     @map("original_price") @db.Decimal(14, 2)
   weightGrams  Int           @default(1000) @map("weight_grams") @db.UnsignedInt
   status       ProductStatus @default(draft)
   createdAt    DateTime      @default(now()) @map("created_at")
@@ -103,6 +111,8 @@ model Product {
   stock        ProductStock?
   images       ProductImage[]
   orderItems   OrderItem[]
+  wishlists    Wishlist[]
+  reviews      ProductReview[]
 
   @@map("products")
 }
@@ -146,10 +156,13 @@ model Order {
   userId           BigInt      @map("user_id") @db.UnsignedBigInt
   totalItemAmount  Decimal     @map("total_item_amount") @db.Decimal(14, 2)
   shippingFee      Decimal     @default(0.00) @map("shipping_fee") @db.Decimal(14, 2)
+  insuranceFee     Decimal     @default(0.00) @map("insurance_fee") @db.Decimal(14, 2)
   discountAmount   Decimal     @default(0.00) @map("discount_amount") @db.Decimal(14, 2)
   grandTotal       Decimal     @map("grand_total") @db.Decimal(14, 2)
   status           OrderStatus @default(pending)
   shippingAddress  String      @map("shipping_address") @db.Text
+  courierName      String?     @map("courier_name") @db.VarChar(100)
+  courierService   String?     @map("courier_service") @db.VarChar(50)
   trackingNumber   String?     @map("tracking_number") @db.VarChar(100)
   notes            String?     @db.Text
   paidAt           DateTime?   @map("paid_at")
@@ -160,6 +173,7 @@ model Order {
   items            OrderItem[]
   payments         OrderPayment[]
   tlaterLoan       TlaterLoan?
+  shipment         OrderShipment?
 
   @@map("orders")
 }
@@ -366,4 +380,231 @@ model TlaterRepayment {
   installment      TlaterInstallment  @relation(fields: [installmentId], references: [id])
 
   @@map("tlater_repayments")
+}
+
+// ----------------------------------------------------------------------------
+// 6. MULTI-ADDRESS, WISHLIST, REVIEWS
+// ----------------------------------------------------------------------------
+model UserAddress {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userId         BigInt   @map("user_id") @db.UnsignedBigInt
+  label          String   @default("Rumah") @db.VarChar(50)
+  recipientName  String   @map("recipient_name") @db.VarChar(100)
+  phone          String   @db.VarChar(25)
+  addressLine    String   @map("address_line") @db.Text
+  city           String   @db.VarChar(100)
+  postalCode     String   @map("postal_code") @db.VarChar(10)
+  isPrimary      Boolean  @default(false) @map("is_primary")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_addresses")
+}
+
+model Wishlist {
+  userId         BigInt   @map("user_id") @db.UnsignedBigInt
+  productId      BigInt   @map("product_id") @db.UnsignedBigInt
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([userId, productId])
+  @@map("wishlists")
+}
+
+model ProductReview {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  productId      BigInt   @map("product_id") @db.UnsignedBigInt
+  userId         BigInt   @map("user_id") @db.UnsignedBigInt
+  orderId        BigInt   @map("order_id") @db.UnsignedBigInt
+  rating         Int      @default(5) @db.UnsignedTinyInt
+  reviewText     String?  @map("review_text") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_reviews")
+}
+
+// ----------------------------------------------------------------------------
+// 7. PROMO ENGINE & USAGE
+// ----------------------------------------------------------------------------
+model Promo {
+  id             BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  name           String      @db.VarChar(150)
+  description    String?     @db.Text
+  code           String?     @unique @db.VarChar(50)
+  type           PromoType   @default(voucher)
+  valueType      ValueType   @default(persen) @map("value_type")
+  value          Decimal     @db.Decimal(14, 2)
+  maxDiscount    Decimal?    @map("max_discount") @db.Decimal(14, 2)
+  startDate      DateTime    @map("start_date") @db.Date
+  endDate        DateTime    @map("end_date") @db.Date
+  minPurchase    Decimal     @default(0.00) @map("min_purchase") @db.Decimal(14, 2)
+  quota          Int?        @db.UnsignedInt
+  usedCount      Int         @default(0) @map("used_count") @db.UnsignedInt
+  maxPerUser     Int         @default(1) @map("max_per_user") @db.UnsignedInt
+  targetType     TargetType  @default(semua) @map("target_type")
+  audienceType   AudienceType @default(semua) @map("audience_type")
+  status         PromoStatus @default(active)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  usages         UserPromoUsage[]
+
+  @@index([status, code])
+  @@map("promos")
+}
+
+enum PromoType {
+  flash_sale
+  voucher
+  diskon_otomatis
+}
+
+enum ValueType {
+  persen
+  nominal
+  poin
+}
+
+enum TargetType {
+  semua
+  kategori
+  produk
+}
+
+enum AudienceType {
+  semua
+  baru
+  member
+  tlater
+}
+
+enum PromoStatus {
+  draft
+  active
+  ended
+  disabled
+}
+
+model UserPromoUsage {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userId         BigInt   @map("user_id") @db.UnsignedBigInt
+  promoId        BigInt   @map("promo_id") @db.UnsignedBigInt
+  orderId        BigInt   @map("order_id") @db.UnsignedBigInt
+  discountAmount Decimal  @map("discount_amount") @db.Decimal(14, 2)
+  usedAt         DateTime @default(now()) @map("used_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promo          Promo    @relation(fields: [promoId], references: [id], onDelete: Cascade)
+
+  @@index([userId, promoId])
+  @@map("user_promo_usages")
+}
+
+// ----------------------------------------------------------------------------
+// 8. SHIPMENTS, TICKETS & NOTIFICATIONS
+// ----------------------------------------------------------------------------
+model OrderShipment {
+  id             BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  orderId        BigInt          @unique @map("order_id") @db.UnsignedBigInt
+  courierName    String          @map("courier_name") @db.VarChar(100)
+  trackingNumber String?         @map("tracking_number") @db.VarChar(100)
+  shippingStatus ShippingStatus  @default(packing) @map("shipping_status")
+  timelineJson   Json?           @map("timeline_json")
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_shipments")
+}
+
+enum ShippingStatus {
+  packing
+  picked_up
+  in_transit
+  delivered
+  returned
+}
+
+model SupportTicket {
+  id             String          @id @db.VarChar(50)
+  userId         BigInt          @map("user_id") @db.UnsignedBigInt
+  subject        String          @db.VarChar(255)
+  category       TicketCategory
+  status         TicketStatus    @default(open)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages       TicketMessage[]
+
+  @@index([userId, status])
+  @@map("support_tickets")
+}
+
+enum TicketCategory {
+  Pesanan
+  Pembayaran
+  Pengiriman
+  Garansi
+  TLater
+  Vibe_Points     @map("Vibe Points")
+  Lainnya
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  completed
+}
+
+model TicketMessage {
+  id             BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  ticketId       String      @map("ticket_id") @db.VarChar(50)
+  senderType     SenderType  @map("sender_type")
+  senderId       BigInt      @map("sender_id") @db.UnsignedBigInt
+  message        String      @db.Text
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  ticket         SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
+enum SenderType {
+  user
+  admin
+}
+
+model Notification {
+  id             BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  userId         BigInt           @map("user_id") @db.UnsignedBigInt
+  title          String           @db.VarChar(150)
+  body           String           @db.Text
+  type           NotificationType @default(general)
+  isRead         Boolean          @default(false) @map("is_read")
+  referenceId    String?          @map("reference_id") @db.VarChar(100)
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  shipping
+  promo
+  ticket
+  points
+  general
 }

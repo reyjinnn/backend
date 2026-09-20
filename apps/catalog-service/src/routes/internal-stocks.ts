@@ -30,7 +30,7 @@ const internalStocksRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     try {
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         for (const item of sortedItems) {
           const productId = BigInt(item.productId);
           
@@ -91,7 +91,7 @@ const internalStocksRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const { items } = request.body as any;
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       for (const item of items) {
         await tx.productStock.updateMany({
           where: { productId: BigInt(item.productId) },
@@ -115,7 +115,7 @@ const internalStocksRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const { items } = request.body as any;
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       for (const item of items) {
         await tx.productStock.updateMany({
           where: { productId: BigInt(item.productId) },

@@ -5,6 +5,7 @@ import { logger } from '@tech-vibe/logger';
 import authPlugin from './plugins/auth';
 import cartRoutes from './routes/cart';
 import checkoutRoutes from './routes/checkout';
+import promoRoutes from './routes/promos';
 
 const buildServer = async () => {
   const fastify = Fastify({
@@ -18,6 +19,7 @@ const buildServer = async () => {
   // Register routes
   await fastify.register(cartRoutes);
   await fastify.register(checkoutRoutes);
+  await fastify.register(promoRoutes);
 
   return fastify;
 };

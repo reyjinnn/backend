@@ -67,7 +67,7 @@ const cartRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     let total = 0;
-    const items = products.map(p => {
+    const items = products.map((p: any) => {
       const quantity = parseInt(cartData[p.id.toString()], 10);
       const subtotal = parseFloat(p.price.toString()) * quantity;
       total += subtotal;

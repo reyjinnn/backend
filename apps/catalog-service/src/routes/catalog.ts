@@ -56,7 +56,7 @@ const catalogRoutes: FastifyPluginAsync = async (fastify) => {
     ]);
 
     return {
-      data: products.map(p => ({
+      data: products.map((p: any) => ({
         ...p,
         id: p.id.toString(), // Convert BigInt to string for JSON serialization
         price: Number(p.price)
@@ -126,7 +126,7 @@ const catalogRoutes: FastifyPluginAsync = async (fastify) => {
     const { categoryId, sku, name, slug, description, price, weightGrams, initialStock } = request.body as any;
     
     // Create product and stock in a transaction
-    const product = await prisma.$transaction(async (tx) => {
+    const product = await prisma.$transaction(async (tx: any) => {
       const createdProduct = await tx.product.create({
         data: {
           categoryId,

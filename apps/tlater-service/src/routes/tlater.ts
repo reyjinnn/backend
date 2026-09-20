@@ -81,7 +81,7 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
     const paymentAmount = parseFloat(amount);
 
     try {
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx: any) => {
         // Lock installment
         const installments: any[] = await tx.$queryRaw`
           SELECT id, loan_id, principal_due, total_due, total_paid, status 
@@ -174,7 +174,7 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      const loan = await prisma.$transaction(async (tx) => {
+      const loan = await prisma.$transaction(async (tx: any) => {
         // Lock account
         const accounts: any[] = await tx.$queryRaw`
           SELECT id, available_limit, status FROM tlater_accounts 
@@ -255,7 +255,7 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
     const { orderId } = request.body as any;
 
     try {
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         // Find active loan for this order
         const loan = await tx.tlaterLoan.findUnique({
           where: { orderId: BigInt(orderId) }

@@ -65,7 +65,7 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
     ]);
 
     return {
-      data: ledgers.map(l => ({
+      data: ledgers.map((l: any) => ({
         ...l,
         id: l.id.toString(),
         userId: l.userId.toString(),
@@ -113,7 +113,7 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
 
     // 2. Transaction: Lock wallet, check balance, update lockedBalance, create PENDING ledger
     try {
-      const ledger = await prisma.$transaction(async (tx) => {
+      const ledger = await prisma.$transaction(async (tx: any) => {
         // Lock row
         const wallets: any[] = await tx.$queryRaw`
           SELECT balance, locked_balance FROM point_wallets 
@@ -192,7 +192,7 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
 
     // 2. Transaction
     try {
-      const ledger = await prisma.$transaction(async (tx) => {
+      const ledger = await prisma.$transaction(async (tx: any) => {
         // Lock row
         const wallets: any[] = await tx.$queryRaw`
           SELECT balance, locked_balance FROM point_wallets 
@@ -269,7 +269,7 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      const ledger = await prisma.$transaction(async (tx) => {
+      const ledger = await prisma.$transaction(async (tx: any) => {
         // Lock row
         await tx.$queryRaw`SELECT balance FROM point_wallets WHERE user_id = ${BigInt(userId)} FOR UPDATE`;
 
@@ -344,7 +344,7 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
       };
     }
 
-    const ledger = await prisma.$transaction(async (tx) => {
+    const ledger = await prisma.$transaction(async (tx: any) => {
       // Create wallet if not exist to prevent error on first time reward
       let wallet = await tx.pointWallet.findUnique({
         where: { userId: BigInt(userId) }

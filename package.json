@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Tech Vibe Core Engine",
-  "packageManager": "npm@11.19.0",
+  "packageManager": "pnpm@9.0.0",
   "workspaces": [
     "apps/*",
     "packages/*"

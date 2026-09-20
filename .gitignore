@@ -120,7 +120,8 @@ Thumbs.db
 *.swo
 
 # Project Documentation
-01_ARCHITECTURE_BRIEF.md
-02_PRD_BRD.md
-03_MVP_SCOPE.md
-04_DATABASE_SCHEMA.md
+01_ARCHITECTURE_BRIEF_V2.md
+02_PRD_BRD_V2.md
+03_MVP_SCOPE_V2.md
+04_DATABASE_SCHEMA_V2.md
+tech_vibe_core_v2.sql

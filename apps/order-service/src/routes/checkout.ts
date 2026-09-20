@@ -25,6 +25,8 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
           productId: Type.String(),
           quantity: Type.Number({ minimum: 1 })
         })),
+        promoCode: Type.Optional(Type.String()),
+        insuranceSelected: Type.Optional(Type.Boolean()),
         paymentSplit: Type.Object({
           usePointsAmount: Type.Number(),
           useTlater: Type.Boolean(),
@@ -36,7 +38,7 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const { id: userId } = (request as any).user;
     const idempotencyKey = request.headers['idempotency-key'] as string;
-    const { shippingAddress, notes, items, paymentSplit } = request.body as any;
+    const { shippingAddress, notes, items, paymentSplit, promoCode, insuranceSelected } = request.body as any;
 
     if (items.length === 0) {
       return reply.badRequest('Cart is empty');
@@ -60,7 +62,7 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
     const orderItemsPayload = [];
 
     for (const item of items) {
-      const product = products.find(p => p.id === BigInt(item.productId));
+      const product = products.find((p: any) => p.id === BigInt(item.productId));
       if (!product) return reply.badRequest(`Product ${item.productId} not found`);
 
       const price = parseFloat(product.price.toString());
@@ -77,7 +79,36 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const shippingFee = 25000; // Flat shipping rate
-    const grandTotal = totalItemAmount + shippingFee;
+    const insuranceFee = insuranceSelected ? 20000 : 0;
+
+    let promoDiscount = 0;
+    let promoId: bigint | null = null;
+    if (promoCode) {
+      const promo = await prisma.promo.findUnique({ where: { code: promoCode } });
+      if (!promo) return reply.badRequest('Invalid promo code');
+      if (promo.status !== 'active') return reply.badRequest('Promo not active');
+      if (promo.quota !== null && promo.usedCount >= promo.quota) return reply.badRequest('Promo quota reached');
+      
+      const now = new Date();
+      if (now < promo.startDate || now > promo.endDate) return reply.badRequest('Promo not within active date window');
+
+      if (totalItemAmount < Number(promo.minPurchase)) return reply.badRequest(`Minimum purchase of ${promo.minPurchase} required for promo`);
+      
+      const promoValue = Number(promo.value);
+      if (promo.valueType === 'persen') {
+        promoDiscount = (totalItemAmount * promoValue) / 100;
+        if (promo.maxDiscount && promoDiscount > Number(promo.maxDiscount)) {
+          promoDiscount = Number(promo.maxDiscount);
+        }
+      } else if (promo.valueType === 'nominal') {
+        promoDiscount = promoValue;
+      }
+      
+      if (promoDiscount > totalItemAmount) promoDiscount = totalItemAmount;
+      promoId = promo.id;
+    }
+
+    const grandTotal = (totalItemAmount - promoDiscount) + shippingFee + insuranceFee;
 
     // 2. Validate Payment Split
     const requestedTlaterAmount = grandTotal - (paymentSplit.usePointsAmount + paymentSplit.gatewayCashAmount);
@@ -145,7 +176,8 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
           userId: BigInt(userId),
           totalItemAmount,
           shippingFee,
-          discountAmount: 0,
+          insuranceFee,
+          discountAmount: promoDiscount,
           grandTotal,
           status: 'pending',
           shippingAddress,
@@ -214,6 +246,21 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: createdOrder.id },
         data: { status: finalStatus, paidAt: finalStatus === 'paid' ? new Date() : null }
       });
+
+      if (promoId) {
+        await prisma.promo.update({
+          where: { id: promoId },
+          data: { usedCount: { increment: 1 } }
+        });
+        await prisma.userPromoUsage.create({
+          data: {
+            userId: BigInt(userId),
+            promoId: promoId,
+            orderId: createdOrder.id,
+            discountAmount: promoDiscount
+          }
+        });
+      }
 
       // Saga Completed Successfully
       isSuccess = true;
