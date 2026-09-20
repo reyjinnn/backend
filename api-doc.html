@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tech Vibe API — Payload Contract & Endpoint Specification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#000000;
+  --panel:#0a0a0a;
+  --panel-2:#111111;
+  --line: rgba(255,255,255,0.1);
+  --line-strong: rgba(255,255,255,0.2);
+  --grid: rgba(255,255,255,0.04);
+  --text:#dce9f2;
+  --text-dim:#8fa8bc;
+  --text-faint:#5d7488;
+  --primary:#4f8ef7;
+  --primary-dim: rgba(79,142,247,0.14);
+  --primary-strong:#8ab4ff;
+  --post:#34d399;
+  --post-dim: rgba(52,211,153,0.14);
+  --put:#fb923c;
+  --put-dim: rgba(251,146,60,0.14);
+  --patch:#22d3ee;
+  --patch-dim: rgba(34,211,238,0.14);
+  --delete:#f87171;
+  --delete-dim: rgba(248,113,113,0.14);
+  --radius: 3px;
+  --sidebar-w: 292px;
+  --panel-w: 408px;
+  font-size: 16px;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background: var(--ink);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-attachment: fixed;
+}
+::selection{ background: var(--primary-dim); color: var(--primary); }
+a{ color: var(--primary); }
+code, pre, .mono{ font-family:'JetBrains Mono', ui-monospace, monospace; }
+h1,h2,h3,h4{ font-family:'Space Grotesk', sans-serif; margin:0; }
+
+/* ---------- scrollbar ---------- */
+::-webkit-scrollbar{ width:9px; height:9px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background: rgba(126,178,210,0.22); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover{ background: rgba(126,178,210,0.4); }
+
+/* ---------- layout shell ---------- */
+.shell{
+  display:flex;
+  min-height:100vh;
+}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  width: var(--sidebar-w);
+  flex: 0 0 var(--sidebar-w);
+  border-right: 1px solid var(--line);
+  position: sticky;
+  top:0;
+  height:100vh;
+  overflow-y:auto;
+  padding: 22px 16px 40px;
+  background: linear-gradient(180deg, rgba(10,10,10,0.7), rgba(10,10,10,0.2));
+  backdrop-filter: blur(6px);
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 4px 6px 18px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.brand-mark{
+  width:34px; height:34px;
+  border: 1.5px solid var(--primary);
+  clip-path: polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  display:flex; align-items:center; justify-content:center;
+  color: var(--primary);
+  font-family:'Space Grotesk', sans-serif;
+  font-weight:700;
+  font-size:15px;
+  flex-shrink:0;
+}
+.brand-name{ font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:15.5px; letter-spacing:0.2px; line-height:1.15; }
+.brand-sub{ font-size:10.5px; color: var(--text-faint); margin-top:2px; font-family:'JetBrains Mono', monospace; }
+
+.search-box{
+  position:relative;
+  margin-bottom: 18px;
+}
+.search-box input{
+  width:100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 9px 12px 9px 30px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  outline:none;
+  transition: border-color .15s ease;
+}
+.search-box input:focus{ border-color: var(--primary); }
+.search-box input::placeholder{ color: var(--text-faint); }
+.search-box svg{
+  position:absolute; left:9px; top:50%; transform:translateY(-50%);
+  width:13px; height:13px; color: var(--text-faint);
+}
+
+.nav-group{ margin-bottom: 4px; }
+.nav-group-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 8px 8px;
+  cursor:pointer;
+  border-radius: var(--radius);
+  user-select:none;
+}
+.nav-group-head:hover{ background: rgba(126,178,210,0.06); }
+.nav-group-title{
+  font-size: 11.5px;
+  font-weight:600;
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+  display:flex; align-items:center; gap:7px;
+}
+.nav-group-count{
+  font-family:'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.nav-group-chev{
+  width:9px; height:9px;
+  transition: transform .15s ease;
+  color: var(--text-faint);
+  flex-shrink:0;
+}
+.nav-group.collapsed .nav-group-chev{ transform: rotate(-90deg); }
+.nav-items{
+  padding-left: 4px;
+  border-left: 1px solid var(--line);
+  margin-left: 12px;
+  overflow:hidden;
+  max-height: 2000px;
+  transition: max-height .2s ease;
+}
+.nav-group.collapsed .nav-items{ max-height:0; }
+.nav-item{
+  display:flex; align-items:center; gap:7px;
+  padding: 5.5px 8px 5.5px 12px;
+  font-size:12.3px;
+  color: var(--text-dim);
+  cursor:pointer;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  line-height:1.3;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.nav-item:hover{ background: rgba(126,178,210,0.07); color: var(--text); }
+.nav-item.active{ background: var(--primary-dim); color: var(--primary); }
+.nav-item .m{
+  font-family:'JetBrains Mono', monospace;
+  font-size:9.5px; font-weight:700;
+  flex-shrink:0;
+  width:38px;
+  letter-spacing:0.2px;
+}
+.nav-item .p{ overflow:hidden; text-overflow:ellipsis; }
+
+/* method colors */
+.m-GET{ color: var(--primary); }
+.m-POST{ color: var(--post); }
+.m-PUT{ color: var(--put); }
+.m-PATCH{ color: var(--patch); }
+.m-DELETE{ color: var(--delete); }
+
+/* ---------- main ---------- */
+.main{
+  flex:1;
+  min-width:0;
+  padding: 0 0 120px;
+}
+
+.hero{
+  padding: 56px 48px 40px;
+  border-bottom: 1px solid var(--line);
+  position:relative;
+  overflow:hidden;
+}
+.hero::before{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    radial-gradient(620px 260px at 88% -10%, rgba(255,255,255,0.05), transparent 60%),
+    radial-gradient(560px 240px at 8% 118%, rgba(255,255,255,0.03), transparent 60%);
+  pointer-events:none;
+}
+.hero-tag{
+  font-family:'JetBrains Mono', monospace;
+  font-size:11.5px;
+  color: var(--primary);
+  display:flex; align-items:center; gap:8px;
+  margin-bottom:18px;
+}
+.hero-tag .dot{ width:6px; height:6px; background: var(--post); border-radius:50%; box-shadow:0 0 0 3px rgba(52,211,153,0.15); }
+.hero h1{
+  font-size: 40px;
+  line-height:1.08;
+  font-weight:700;
+  color:#f3f8fb;
+  max-width: 680px;
+  letter-spacing: -0.5px;
+}
+.hero h1 span{ color: var(--text-faint); font-weight:500; }
+.hero p{
+  margin-top:16px;
+  max-width: 620px;
+  font-size:14.5px;
+  line-height:1.65;
+  color: var(--text-dim);
+}
+.hero-stats{
+  display:flex; flex-wrap:wrap; gap:0;
+  margin-top:32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  max-width: 720px;
+  overflow:hidden;
+}
+.hstat{
+  flex:1; min-width:130px;
+  padding: 14px 18px;
+  border-right: 1px solid var(--line);
+}
+.hstat:last-child{ border-right:none; }
+.hstat b{
+  display:block;
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 22px;
+  color: var(--text);
+  font-weight:700;
+}
+.hstat span{
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family:'JetBrains Mono', monospace;
+}
+
+/* filter pills */
+.filters{
+  display:flex; gap:8px; flex-wrap:wrap;
+  padding: 20px 48px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top:0;
+  z-index:20;
+  background: rgba(0,0,0,0.86);
+  backdrop-filter: blur(10px);
+}
+.pill{
+  font-family:'JetBrains Mono', monospace;
+  font-size:11.5px;
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-dim);
+  cursor:pointer;
+  white-space:nowrap;
+  transition: all .12s ease;
+}
+.pill:hover{ border-color: var(--line-strong); color: var(--text); }
+.pill.active{ background: var(--primary); border-color: var(--primary); color: #08131f; font-weight:700; }
+
+/* ---------- endpoint list ---------- */
+.section-block{ padding: 40px 48px 8px; }
+.section-title{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight:700;
+  color:#eef5f9;
+  display:flex; align-items:baseline; gap:10px;
+  padding-bottom:10px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 22px;
+}
+.section-title .cnt{ font-family:'JetBrains Mono', monospace; font-size:12px; color: var(--text-faint); font-weight:500; }
+
+.endpoint{
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 22px;
+  background: linear-gradient(180deg, rgba(15,15,15,0.5), rgba(15,15,15,0.1));
+  scroll-margin-top: 78px;
+  overflow:hidden;
+}
+.endpoint-head{
+  display:flex; align-items:center; gap:12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap:wrap;
+}
+.hash{
+  font-family:'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  flex-shrink:0;
+}
+.method-badge{
+  font-family:'JetBrains Mono', monospace;
+  font-weight:700;
+  font-size:11.5px;
+  padding: 4px 9px;
+  border-radius: 2px;
+  letter-spacing:0.4px;
+  flex-shrink:0;
+}
+.mb-GET{ background: var(--primary-dim); color: var(--primary); }
+.mb-POST{ background: var(--post-dim); color: var(--post); }
+.mb-PUT{ background: var(--put-dim); color: var(--put); }
+.mb-PATCH{ background: var(--patch-dim); color: var(--patch); }
+.mb-DELETE{ background: var(--delete-dim); color: var(--delete); }
+.endpoint-path{
+  font-family:'JetBrains Mono', monospace;
+  font-size: 13.5px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.endpoint-path .seg{ color: var(--text-faint); }
+.endpoint-path .param{ color: var(--primary); }
+.tag-row{ display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+.tag{
+  font-size:10px;
+  font-family:'JetBrains Mono', monospace;
+  padding: 3px 8px;
+  border-radius: 2px;
+  border:1px solid;
+  white-space:nowrap;
+}
+.tag-public{ color: var(--post); border-color: rgba(52,211,153,0.35); background: var(--post-dim); }
+.tag-bearer{ color: var(--primary); border-color: rgba(79,142,247,0.35); background: var(--primary-dim); }
+.tag-admin{ color: var(--delete); border-color: rgba(248,113,113,0.35); background: var(--delete-dim); }
+.tag-internal{ color: var(--text-dim); border-color: var(--line-strong); background: rgba(148,177,213,0.07); }
+
+.endpoint-body{
+  display:flex;
+  align-items:stretch;
+}
+.ep-left{
+  flex:1;
+  min-width:0;
+  padding: 18px 20px 22px;
+  border-right: 1px solid var(--line);
+}
+.ep-right{
+  width: var(--panel-w);
+  flex-shrink:0;
+  padding: 18px 20px 22px;
+  background: rgba(15,15,15,0.35);
+}
+.ep-title{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 15.5px;
+  font-weight:600;
+  color:#eef5f9;
+  margin-bottom:6px;
+}
+.ep-desc{
+  font-size: 13.2px;
+  line-height:1.65;
+  color: var(--text-dim);
+}
+.ep-desc code{ font-size:12px; background: rgba(126,178,210,0.1); padding:1px 5px; border-radius:2px; color: var(--primary-strong); }
+.ep-desc ol{ margin: 10px 0 0; padding-left:18px; }
+.ep-desc li{ margin-bottom:4px; }
+
+.param-label{
+  font-family:'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing:0.6px;
+  color: var(--text-faint);
+  margin: 20px 0 10px;
+}
+.param-table{ width:100%; border-collapse:collapse; }
+.param-table tr{ border-top: 1px solid var(--line); }
+.param-table tr:first-child{ border-top:none; }
+.param-table td{ padding: 8px 6px; vertical-align:top; font-size:12.5px; }
+.param-name{ font-family:'JetBrains Mono', monospace; color: var(--primary-strong); font-size:12.3px; white-space:nowrap; }
+.param-loc{
+  font-family:'JetBrains Mono', monospace; font-size:9.5px;
+  color: var(--text-faint); border:1px solid var(--line); border-radius:2px; padding:1px 5px; margin-left:6px;
+}
+.param-req{ color: var(--delete); font-size:10px; margin-left:5px; }
+.param-desc{ color: var(--text-dim); line-height:1.5; }
+
+.code-tabs{ display:flex; gap:2px; margin-bottom:0; }
+.code-tab{
+  font-family:'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 7px 13px;
+  color: var(--text-faint);
+  cursor:pointer;
+  border: 1px solid var(--line);
+  border-bottom:none;
+  border-radius: 3px 3px 0 0;
+  background: rgba(255,255,255,0.02);
+}
+.code-tab.active{ color: var(--text); background: var(--panel-2); border-color: var(--line-strong); }
+.code-panel{
+  border: 1px solid var(--line-strong);
+  border-radius: 0 3px 3px 3px;
+  background: var(--panel-2);
+  position:relative;
+}
+.code-panel-inner{ display:none; }
+.code-panel-inner.active{ display:block; }
+.code-status{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  font-family:'JetBrains Mono', monospace;
+  font-size: 10.5px;
+}
+.status-ok{ color: var(--post); }
+.copy-btn{
+  font-family:'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-faint);
+  background:transparent;
+  border: 1px solid var(--line);
+  border-radius:2px;
+  padding: 3px 8px;
+  cursor:pointer;
+}
+.copy-btn:hover{ color: var(--primary); border-color: var(--primary); }
+pre.jsonblock{
+  margin:0;
+  padding: 14px 16px;
+  font-size: 12.2px;
+  line-height:1.62;
+  overflow-x:auto;
+  max-height: 480px;
+  overflow-y:auto;
+}
+.jk{ color: var(--primary-strong); }
+.js{ color: var(--post); }
+.jn{ color: var(--put); }
+.jb{ color: var(--patch); }
+.jnull{ color: var(--text-faint); }
+.no-body{
+  padding: 16px;
+  font-size:12px;
+  color: var(--text-faint);
+  font-family:'JetBrains Mono', monospace;
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+}
+
+footer{
+  padding: 44px 48px 60px;
+  border-top: 1px solid var(--line);
+  font-family:'JetBrains Mono', monospace;
+  font-size:11.5px;
+  color: var(--text-faint);
+  display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+
+/* mobile */
+.menu-btn{ display:none; }
+@media (max-width: 980px){
+  :root{ --panel-w: 100%; }
+  .sidebar{
+    position: fixed; z-index:50; left:0; top:0;
+    transform: translateX(-100%);
+    transition: transform .2s ease;
+    background: var(--ink);
+    width: 82vw;
+    max-width:320px;
+  }
+  .sidebar.open{ transform: translateX(0); box-shadow: 20px 0 40px rgba(0,0,0,0.4); }
+  .menu-btn{
+    display:flex; align-items:center; gap:8px;
+    position: fixed; top: calc(16px + env(safe-area-inset-top,0px)); left:16px; z-index:60;
+    background: var(--panel); border:1px solid var(--line-strong); border-radius: 999px;
+    padding: 9px 14px; color: var(--text); font-family:'JetBrains Mono',monospace; font-size:11px;
+  }
+  .hero{ padding: 90px 20px 32px; }
+  .hero h1{ font-size: 28px; }
+  .filters{ padding: 16px 20px; overflow-x:auto; flex-wrap:nowrap; }
+  .section-block{ padding: 30px 20px 8px; }
+  .endpoint-body{ flex-direction:column; }
+  .ep-right{ width:100%; border-right:none; border-top:1px solid var(--line); }
+  .endpoint-head{ padding:14px 16px; }
+  footer{ padding: 30px 20px 50px; }
+}
+.scrim{ display:none; }
+@media (max-width:980px){
+  .scrim{ display:block; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:45; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .scrim.show{ opacity:1; pointer-events:auto; }
+}
+</style>
+</head>
+<body>
+
+<button class="menu-btn" id="menuBtn">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  Endpoints
+</button>
+<div class="scrim" id="scrim"></div>
+
+<div class="shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">TV</div>
+      <div>
+        <div class="brand-name">Tech Vibe API</div>
+        <div class="brand-sub">v2.0 — refined contract</div>
+      </div>
+    </div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="Cari endpoint / path...">
+    </div>
+    <nav id="navGroups"></nav>
+  </aside>
+
+  <main class="main">
+    <section class="hero">
+      <h1>Tech Vibe <span>— Official API Payload Contract</span></h1>
+      <p>Spesifikasi endpoint dan kontrak payload resmi untuk 6 kontainer microservice pada monorepo Fastify 5: otentikasi &amp; JWT, verifikasi KYC, katalog &amp; stok atomik, ulasan produk terverifikasi, wishlist, orkestrasi checkout split-payment, voucher promo, tracking logistik ekspedisi kurir, buku kas poin double-entry, limit kredit TLater BNPL, multi-alamat, tiket bantuan TechVibe Care, dan notifikasi terpadu.</p>
+      <div class="hero-stats">
+        <div class="hstat"><b id="statTotal">—</b><span>total endpoint</span></div>
+        <div class="hstat"><b>6</b><span>service container</span></div>
+        <div class="hstat"><b>MySQL 8</b><span>InnoDB · Prisma ORM</span></div>
+        <div class="hstat"><b>Redis 7</b><span>cart &amp; distributed lock</span></div>
+      </div>
+    </section>
+
+    <div class="filters" id="filterBar"></div>
+
+    <div id="contentRoot"></div>
+
+    <footer>
+      <span>Tech Vibe Core Engine · Fastify 5 Monorepo</span>
+      <span id="footCount">—</span>
+    </footer>
+  </main>
+
+</div>
+
+<script>
+/* ============================================================
+   DATA — seluruh 63 endpoint, sesuai kontrak asli tanpa dikurangi
+   ============================================================ */
+const GROUPS = [
+  {key:'gateway',      label:'Gateway & Health'},
+  {key:'auth-user',    label:'Auth & User'},
+  {key:'kyc',          label:'KYC'},
+  {key:'catalog-review', label:'Catalog & Review'},
+  {key:'wishlist',     label:'Wishlist'},
+  {key:'cart-checkout', label:'Cart & Checkout'},
+  {key:'promos',       label:'Promos & Kupon'},
+  {key:'logistik',     label:'Logistik & Resi'},
+  {key:'poin',         label:'Poin Loyalty'},
+  {key:'tlater',       label:'TLater BNPL'},
+  {key:'care',         label:'TechVibe Care'},
+  {key:'notifikasi',   label:'Notifikasi'},
+  {key:'internal',     label:'Internal RPC'},
+];
+
+const EP = [
+{num:1, method:'GET', path:'/health', group:'gateway', badges:['public'],
+ title:'Health Check Service',
+ desc:'Pemeriksaan kesehatan sistem dan status konektivitas database MySQL dan cache Redis.',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:{status:"ok", timestamp:"string", services:{database:"connected", redis:"connected"}}},
+
+{num:2, method:'POST', path:'/api/v1/auth/register', group:'auth-user', badges:['public'],
+ title:'Pendaftaran Akun Baru (Customer)',
+ desc:'Mendaftarkan user baru dengan verifikasi password berkekuatan tinggi.',
+ params:[], req:{name:"Andara Reyhan", email:"reyhan@techvibe.id", phone:"+6281234567890", password:"P@ssw0rdTechVibe!"},
+ resStatus:'201 OK',
+ res:{user:{id:101,name:"Andara Reyhan",email:"reyhan@techvibe.id",phone:"+6281234567890",role:"customer",status:"active",createdAt:"string"},
+      tokens:{accessToken:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", refreshToken:"dGhpc0lzQVJlZnJlc2hUb2tlblJhbmRvbVN0cmluZw...", expiresIn:900}}},
+
+{num:3, method:'POST', path:'/api/v1/auth/login', group:'auth-user', badges:['public'],
+ title:'Login Pengguna',
+ desc:'Autentikasi dengan email dan password. Menghasilkan sepasang Access Token (JWT) dan Refresh Token.',
+ params:[], req:{email:"reyhan@techvibe.id", password:"P@ssw0rdTechVibe!"},
+ resStatus:'200 OK',
+ res:{user:{id:101,name:"Andara Reyhan",email:"reyhan@techvibe.id",phone:"+6281234567890",role:"customer",status:"active",createdAt:"string"},
+      tokens:{accessToken:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", refreshToken:"dGhpc0lzQVJlZnJlc2hUb2tlblJhbmRvbVN0cmluZw...", expiresIn:900}}},
+
+{num:4, method:'POST', path:'/api/v1/auth/refresh', group:'auth-user', badges:['public'],
+ title:'Refresh Access Token',
+ desc:'Menerbitkan Access Token baru menggunakan Refresh Token yang valid.',
+ params:[], req:{refreshToken:"dGhpc0lzQVJlZnJlc2hUb2tlblJhbmRvbVN0cmluZw..."},
+ resStatus:'200 OK',
+ res:{accessToken:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", refreshToken:"dGhpc0lzQVJlZnJlc2hUb2tlblJhbmRvbVN0cmluZw...", expiresIn:900}},
+
+{num:5, method:'GET', path:'/api/v1/auth/me', group:'auth-user', badges:['bearer'],
+ title:'Profil Pengguna Saat Ini',
+ desc:'Mengambil data profil pengguna yang sedang login.',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:{id:101,name:"Andara Reyhan",email:"reyhan@techvibe.id",phone:"+6281234567890",role:"customer",status:"active",createdAt:"string"}},
+
+{num:6, method:'POST', path:'/api/v1/kyc/apply', group:'kyc', badges:['bearer'],
+ title:'Pengajuan Verifikasi Identitas (KYC)',
+ desc:'Mengunggah data NIK, alamat, foto e-KTP, dan swafoto untuk prasyarat pengajuan limit kredit TLater.',
+ params:[], req:{nik:"3201234567890001", dateOfBirth:"1998-05-14", address:"Jl. Sudirman No. 45, Jakarta Pusat", ktpImageUrl:"https://storage.techvibe.id/kyc/ktp_101.jpg", selfieImageUrl:"https://storage.techvibe.id/kyc/selfie_101.jpg"},
+ resStatus:'201 OK',
+ res:{userId:101, nik:"3201234567890001", dateOfBirth:"1998-05-14", address:"Jl. Sudirman No. 45, Jakarta Pusat", ktpImageUrl:"https://storage.techvibe.id/kyc/ktp_101.jpg", selfieImageUrl:"https://storage.techvibe.id/kyc/selfie_101.jpg", kycStatus:"pending", kycVerifiedAt:"string", rejectionReason:"string"}},
+
+{num:7, method:'GET', path:'/api/v1/kyc/status', group:'kyc', badges:['bearer'],
+ title:'Status Verifikasi KYC Pelanggan',
+ desc:'Mengecek status verifikasi KYC akun saat ini (<code>unverified</code>, <code>pending</code>, <code>verified</code>, <code>rejected</code>).',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:{userId:101, nik:"3201234567890001", dateOfBirth:"1998-05-14", address:"Jl. Sudirman No. 45, Jakarta Pusat", ktpImageUrl:"https://storage.techvibe.id/kyc/ktp_101.jpg", selfieImageUrl:"https://storage.techvibe.id/kyc/selfie_101.jpg", kycStatus:"pending", kycVerifiedAt:"string", rejectionReason:"string"}},
+
+{num:8, method:'GET', path:'/api/v1/kyc/admin/applications', group:'kyc', badges:['bearer','admin'],
+ title:'Daftar Pengajuan KYC (Admin Only)',
+ desc:'Menampilkan daftar seluruh pengajuan KYC pengguna untuk direview backoffice.',
+ params:[{name:'status',loc:'query'},{name:'page',loc:'query'},{name:'limit',loc:'query'}], req:null,
+ resStatus:'200 OK',
+ res:{items:[{userId:101, nik:"3201234567890001", dateOfBirth:"1998-05-14", address:"Jl. Sudirman No. 45, Jakarta Pusat", ktpImageUrl:"https://storage.techvibe.id/kyc/ktp_101.jpg", selfieImageUrl:"https://storage.techvibe.id/kyc/selfie_101.jpg", kycStatus:"pending", kycVerifiedAt:"string", rejectionReason:"string"}], total:45, page:1, limit:20}},
+
+{num:9, method:'PATCH', path:'/api/v1/kyc/admin/verify/{userId}', group:'kyc', badges:['bearer','admin'],
+ title:'Persetujuan / Penolakan KYC (Admin Only)',
+ desc:'Memvalidasi pengajuan KYC. Jika <code>verified</code>, sistem otomatis memicu alokasi limit kredit awal TLater.',
+ params:[{name:'userId',loc:'path',required:true}],
+ req:{status:"string", rejectionReason:"Foto e-KTP buram atau tidak terbaca"},
+ resStatus:'200 OK',
+ res:{userId:101, kycStatus:"verified", updatedAt:"string"}},
+
+{num:10, method:'GET', path:'/api/v1/catalog/categories', group:'catalog-review', badges:['public'],
+ title:'Daftar Kategori Produk',
+ desc:'Mengambil hierarki pohon kategori produk teknologi.',
+ params:[{name:'parentId',loc:'query',desc:'Filter subkategori berdasarkan parentId'}], req:null,
+ resStatus:'200 OK',
+ res:[{id:1, name:"Smartphone & Gadgets", slug:"smartphone-gadgets", description:"Flagship smartphones and essential wearables", parentId:null}]},
+
+{num:11, method:'GET', path:'/api/v1/catalog/products', group:'catalog-review', badges:['public'],
+ title:'Jelajah Katalog Produk',
+ desc:'Pencarian dan filter katalog produk teknologi lengkap dengan status stok aktual.',
+ params:[{name:'search',loc:'query',desc:'Keyword pencarian nama atau SKU'},{name:'categoryId',loc:'query'},{name:'minPrice',loc:'query'},{name:'maxPrice',loc:'query'},{name:'sortBy',loc:'query'},{name:'page',loc:'query'},{name:'limit',loc:'query'}],
+ req:null,
+ resStatus:'200 OK',
+ res:{items:[{id:201, categoryId:1, sku:"APL-IP16P-256", name:"iPhone 16 Pro 256GB - Titanium Black", slug:"iphone-16-pro-256gb-titanium-black", description:"Apple A18 Pro chip, 48MP Fusion camera, USB-C", price:20999000.0, weightGrams:500, status:"active", stock:15, reservedStock:2, images:[{id:501, imageUrl:"https://images.techvibe.id/products/ip16pro.png", isPrimary:true}]}], total:120, page:1, limit:20}},
+
+{num:12, method:'POST', path:'/api/v1/catalog/products', group:'catalog-review', badges:['bearer','admin'],
+ title:'Tambah Produk Baru (Admin Only)',
+ desc:'Membuat entri produk baru beserta alokasi stok awal di tabel <code>product_stocks</code>.',
+ params:[],
+ req:{name:"MacBook Air M3 13-inch", slug:"macbook-air-m3-13-inch", sku:"APL-MBA-M3-13", categoryId:2, price:18999000.0, weightGrams:1, description:"Apple M3 8-core CPU, 8GB Unified Memory", stock:25, imageUrls:["string"]},
+ resStatus:'201 OK',
+ res:{id:201, categoryId:1, sku:"APL-IP16P-256", name:"iPhone 16 Pro 256GB - Titanium Black", slug:"iphone-16-pro-256gb-titanium-black", description:"Apple A18 Pro chip, 48MP Fusion camera, USB-C", price:20999000.0, weightGrams:500, status:"active", stock:15, reservedStock:2, images:[{id:501, imageUrl:"https://images.techvibe.id/products/ip16pro.png", isPrimary:true}]}},
+
+{num:13, method:'GET', path:'/api/v1/catalog/products/{slug}', group:'catalog-review', badges:['public'],
+ title:'Detail Produk Berdasarkan Slug',
+ desc:'Mengambil detail lengkap produk, spesifikasi, galeri foto, dan sisa stok siap beli.',
+ params:[{name:'slug',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{id:201, categoryId:1, sku:"APL-IP16P-256", name:"iPhone 16 Pro 256GB - Titanium Black", slug:"iphone-16-pro-256gb-titanium-black", description:"Apple A18 Pro chip, 48MP Fusion camera, USB-C", price:20999000.0, weightGrams:500, status:"active", stock:15, reservedStock:2, images:[{id:501, imageUrl:"https://images.techvibe.id/products/ip16pro.png", isPrimary:true}]}},
+
+{num:14, method:'PUT', path:'/api/v1/catalog/products/{id}', group:'catalog-review', badges:['bearer','admin'],
+ title:'Perbarui Produk & Stok (Admin Only)',
+ desc:'Mengupdate data produk, harga, status, atau jumlah stok fisik.',
+ params:[{name:'id',loc:'path',required:true}],
+ req:{name:"string", price:100000.0, stock:1, status:"string"},
+ resStatus:'200 OK',
+ res:{id:201, categoryId:1, sku:"APL-IP16P-256", name:"iPhone 16 Pro 256GB - Titanium Black", slug:"iphone-16-pro-256gb-titanium-black", description:"Apple A18 Pro chip, 48MP Fusion camera, USB-C", price:20999000.0, weightGrams:500, status:"active", stock:15, reservedStock:2, images:[{id:501, imageUrl:"https://images.techvibe.id/products/ip16pro.png", isPrimary:true}]}},
+
+{num:15, method:'GET', path:'/api/v1/cart', group:'cart-checkout', badges:['bearer'],
+ title:'Lihat Keranjang Belanja',
+ desc:'Mengambil isi keranjang belanja user aktif.',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:{items:[{productId:201, name:"iPhone 16 Pro 256GB", price:20999000.0, quantity:1, subtotal:20999000.0, imageUrl:"https://images.techvibe.id/products/ip16pro.png"}], totalItemAmount:20999000.0}},
+
+{num:16, method:'DELETE', path:'/api/v1/cart', group:'cart-checkout', badges:['bearer'],
+ title:'Kosongkan Keranjang Belanja',
+ desc:'Menghapus seluruh item dari keranjang belanja user.',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:{message:"Keranjang belanja berhasil dikosongkan"}},
+
+{num:17, method:'POST', path:'/api/v1/cart/items', group:'cart-checkout', badges:['bearer'],
+ title:'Tambah Barang ke Keranjang',
+ desc:'Menambahkan item produk ke keranjang belanja atau menambah kuantitas jika sudah ada.',
+ params:[], req:{productId:201, quantity:1},
+ resStatus:'200 OK',
+ res:{items:[{productId:201, name:"iPhone 16 Pro 256GB", price:20999000.0, quantity:1, subtotal:20999000.0, imageUrl:"https://images.techvibe.id/products/ip16pro.png"}], totalItemAmount:20999000.0}},
+
+{num:18, method:'PATCH', path:'/api/v1/cart/items/{productId}', group:'cart-checkout', badges:['bearer'],
+ title:'Update Jumlah Barang di Keranjang',
+ desc:'Mengubah kuantitas item spesifik dalam keranjang.',
+ params:[{name:'productId',loc:'path',required:true}], req:{quantity:2},
+ resStatus:'200 OK',
+ res:{items:[{productId:201, name:"iPhone 16 Pro 256GB", price:20999000.0, quantity:1, subtotal:20999000.0, imageUrl:"https://images.techvibe.id/products/ip16pro.png"}], totalItemAmount:100000.0}},
+
+{num:19, method:'DELETE', path:'/api/v1/cart/items/{productId}', group:'cart-checkout', badges:['bearer'],
+ title:'Hapus Barang dari Keranjang',
+ desc:'Menghapus item produk tertentu dari keranjang belanja.',
+ params:[{name:'productId',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{message:"Item berhasil dihapus"}},
+
+{num:20, method:'POST', path:'/api/v1/checkout/simulate', group:'cart-checkout', badges:['bearer'],
+ title:'Simulasi Perhitungan Split-Payment Checkout',
+ desc:'Menghitung rincian pembayaran kombinasi (Poin, Cicilan TLater, dan Cash Gateway) sebelum konfirmasi pesanan final.',
+ params:[],
+ req:{items:[{productId:201, quantity:1}], shippingCity:"Jakarta Selatan", usePoints:50000, useTlater:true, tlaterTenor:1},
+ resStatus:'200 OK',
+ res:{totalItemAmount:20999000.0, shippingFee:25000.0, grandTotal:21024000.0, pointsUsed:50000, pointsDeduction:50000.0, tlaterPrincipal:5000000.0, tlaterInterest:375000.0, tlaterAdminFee:15000.0, tlaterMonthlyInstallment:1795000.0, gatewayCashRequired:15974000.0}},
+
+{num:21, method:'POST', path:'/api/v1/checkout', group:'cart-checkout', badges:['bearer'],
+ title:'Eksekusi Checkout Transaksi (Split-Payment)',
+ desc:'Mengeksekusi transaksi pesanan melalui orkestrasi atomik:<ol><li>Atomic stock reservation (pessimistic lock).</li><li>Hold limit TLater (jika digunakan).</li><li>Hold saldo Poin loyalitas (jika digunakan).</li><li>Pembuatan record order &amp; pembayaran.</li></ol>',
+ params:[{name:'Idempotency-Key',loc:'header',required:true,desc:'Header kunci idempotensi untuk keamanan transaksi ganda'}],
+ req:{items:[{productId:201, quantity:1}], shippingAddress:"Gedung Cyber 2 Lt 18, Jl. HR Rasuna Said, Jakarta", shippingCity:"Jakarta Selatan", usePoints:50000, useTlater:true, tlaterTenor:1, notes:"Tolong packing kayu & bubble wrap"},
+ resStatus:'201 OK',
+ res:{order:{id:801, orderNumber:"TV-20260920-801A", userId:101, totalItemAmount:20999000.0, shippingFee:25000.0, discountAmount:50000.0, grandTotal:20974000.0, status:"pending", shippingAddress:"Jl. Gatot Subroto No. 12, Jakarta", trackingNumber:"string", paidAt:"string", createdAt:"string", payments:[{method:"string", amount:100000.0, status:"string"}]},
+      splitBreakdown:{pointsDeduction:50000.0, tlaterLoanPrincipal:5000000.0, gatewayCashAmount:15974000.0},
+      paymentInstructions:{virtualAccountNumber:"8808123456789012", paymentGatewayUrl:"https://simulator.techvibe.id/pay/8808123456789012", expiresAt:"string"}}},
+
+{num:22, method:'GET', path:'/api/v1/orders', group:'cart-checkout', badges:['bearer'],
+ title:'Daftar Riwayat Pesanan Pengguna',
+ desc:'Menampilkan daftar seluruh pesanan belanja pengguna terautentikasi.',
+ params:[{name:'status',loc:'query'},{name:'page',loc:'query'},{name:'limit',loc:'query'}], req:null,
+ resStatus:'200 OK',
+ res:{items:[{id:801, orderNumber:"TV-20260920-801A", userId:101, totalItemAmount:20999000.0, shippingFee:25000.0, discountAmount:50000.0, grandTotal:20974000.0, status:"pending", shippingAddress:"Jl. Gatot Subroto No. 12, Jakarta", trackingNumber:"string", paidAt:"string", createdAt:"string", payments:[{method:"string", amount:100000.0, status:"string"}]}], total:1, page:1, limit:1}},
+
+{num:23, method:'GET', path:'/api/v1/orders/{orderNumber}', group:'cart-checkout', badges:['bearer'],
+ title:'Detail Pesanan Spesifik',
+ desc:'Mengambil detail pesanan berdasarkan kode orderNumber.',
+ params:[{name:'orderNumber',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{id:801, orderNumber:"TV-20260920-801A", userId:101, totalItemAmount:20999000.0, shippingFee:25000.0, discountAmount:50000.0, grandTotal:20974000.0, status:"pending", shippingAddress:"Jl. Gatot Subroto No. 12, Jakarta", trackingNumber:"string", paidAt:"string", createdAt:"string", payments:[{method:"string", amount:100000.0, status:"string"}]}},
+
+{num:24, method:'POST', path:'/api/v1/orders/{orderNumber}/cancel', group:'cart-checkout', badges:['bearer'],
+ title:'Batalkan Pesanan',
+ desc:'Membatalkan pesanan berstatus pending dan mengembalikan reserved stok serta merilis hold poin & kredit TLater.',
+ params:[{name:'orderNumber',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{orderNumber:"TV-20260920-801A", status:"cancelled", message:"Pesanan berhasil dibatalkan dan seluruh alokasi sumber daya telah dikembalikan"}},
+
+{num:25, method:'PATCH', path:'/api/v1/orders/{orderNumber}/complete', group:'cart-checkout', badges:['bearer'],
+ title:'Selesaikan Pesanan & Klaim Poin',
+ desc:'Mengonfirmasi pesanan telah diterima dengan baik. Memicu event akrual reward Poin loyalitas sebesar 1% dari total harga barang.',
+ params:[{name:'orderNumber',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{orderNumber:"TV-20260920-801A", status:"completed", pointsEarned:209740, completedAt:"string"}},
+
+{num:26, method:'POST', path:'/api/v1/orders/webhook/payment', group:'cart-checkout', badges:['public'],
+ title:'Webhook Notifikasi Pembayaran Gateway',
+ desc:'Menerima callback status settlement pembayaran tunai dari payment gateway mock.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{orderNumber:"TV-20260920-801A", paymentStatus:"settled", referenceId:"TRX-MOCK-99482", paidAt:"string"},
+ resStatus:'200 OK',
+ res:{received:true}},
+
+{num:27, method:'GET', path:'/api/v1/points/wallet', group:'poin', badges:['bearer'],
+ title:'Cek Saldo Dompet Poin',
+ desc:'Mengambil saldo reward poin pelanggan aktif beserta saldo yang sedang di-hold.',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:{userId:101, balance:50000, lockedBalance:10000, availableBalance:40000, updatedAt:"string"}},
+
+{num:28, method:'GET', path:'/api/v1/points/history', group:'poin', badges:['bearer'],
+ title:'Buku Kas Riwayat Mutasi Poin',
+ desc:'Mengambil riwayat mutasi kredit (akrual) dan debit (redemption) poin dengan pola double-entry ledger.',
+ params:[{name:'type',loc:'query'},{name:'page',loc:'query'},{name:'limit',loc:'query'}], req:null,
+ resStatus:'200 OK',
+ res:{items:[{id:901, idempotencyKey:"pt-reward-TV-801A", type:"credit", amount:209740, balanceAfter:259740, referenceType:"order_reward", referenceId:"TV-20260920-801A", description:"Cashback 1% transaksi pesanan selesai", createdAt:"string"}], total:1, page:1, limit:1}},
+
+{num:29, method:'GET', path:'/api/v1/tlater/account', group:'tlater', badges:['bearer'],
+ title:'Informasi Akun & Limit Kredit TLater',
+ desc:'Mengambil status akun, total limit kredit yang disetujui, dan sisa limit yang dapat digunakan berbelanja.',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:{id:301, userId:101, creditLimit:10000000.0, availableLimit:6500000.0, usedLimit:3500000.0, interestRateMonthly:2.5, lateFeeDaily:0.1, status:"active"}},
+
+{num:30, method:'POST', path:'/api/v1/tlater/simulate', group:'tlater', badges:['public'],
+ title:'Kalkulator Simulasi Cicilan Pinjaman',
+ desc:'Perhitungan angsuran bulanan flat berdasarkan tenor (1, 3, atau 6 bulan) dan biaya administrasi.',
+ params:[], req:{amount:3500000.0, tenorMonths:3},
+ resStatus:'200 OK',
+ res:{principalAmount:3500000.0, tenorMonths:3, monthlyInterestRate:2.5, adminFee:15000.0, monthlyPrincipal:1166666.67, monthlyInterest:87500.0, monthlyInstallment:1254166.67, totalLoanAmount:3777500.0}},
+
+{num:31, method:'GET', path:'/api/v1/tlater/loans', group:'tlater', badges:['bearer'],
+ title:'Daftar Kontrak Pinjaman Pengguna',
+ desc:'Mengambil seluruh kontrak pinjaman TLater aktif maupun yang telah lunas.',
+ params:[{name:'status',loc:'query'},{name:'page',loc:'query'},{name:'limit',loc:'query'}], req:null,
+ resStatus:'200 OK',
+ res:{items:[{id:401, loanCode:"LN-20260920-401", orderId:801, principalAmount:3500000.0, adminFee:15000.0, interestRate:2.5, totalInterest:262500.0, totalLoanAmount:3777500.0, tenorMonths:3, status:"active", disbursedAt:"string"}], total:1}},
+
+{num:32, method:'GET', path:'/api/v1/tlater/loans/{loanCode}', group:'tlater', badges:['bearer'],
+ title:'Detail Pinjaman & Jadwal Angsuran',
+ desc:'Mengambil jadwal tagihan angsuran bulanan, tanggal jatuh tempo, dan denda keterlambatan jika ada.',
+ params:[{name:'loanCode',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{loan:{id:401, loanCode:"LN-20260920-401", orderId:801, principalAmount:3500000.0, adminFee:15000.0, interestRate:2.5, totalInterest:262500.0, totalLoanAmount:3777500.0, tenorMonths:3, status:"active", disbursedAt:"string"},
+      installments:[{id:1201, installmentNumber:1, principalDue:1166666.67, interestDue:87500.0, lateFee:0.0, totalDue:1259166.67, totalPaid:0.0, dueDate:"2026-10-20", status:"unpaid"}]}},
+
+{num:33, method:'POST', path:'/api/v1/tlater/repayments', group:'tlater', badges:['bearer'],
+ title:'Pembayaran Angsuran TLater',
+ desc:'Membayar tagihan angsuran cicilan. Jika pembayaran sukses, nilai pokok angsuran langsung memulihkan <code>available_limit</code> kredit pengguna.',
+ params:[{name:'Idempotency-Key',loc:'header',required:true}],
+ req:{installmentId:1201, amount:1259166.67, paymentMethod:"bca_va"},
+ resStatus:'200 OK',
+ res:{paymentReference:"PAY-TL-849202", installmentId:1201, status:"paid", amountPaid:1259166.67, restoredLimit:1166666.67, newAvailableLimit:7666666.67}},
+
+{num:34, method:'POST', path:'/internal/stocks/reserve', group:'internal', badges:['internal'],
+ title:'[Internal] Atomic Stock Reservation',
+ desc:'Dipanggil oleh <code>order-service</code> saat checkout. Mengunci row database (<code>SELECT ... FOR UPDATE</code>) dan memindahkan kuantitas dari <code>stock</code> ke <code>reserved_stock</code> selama 15 menit.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{orderId:"TV-20260920-801A", items:[{productId:201, quantity:1}], timeoutMinutes:1},
+ resStatus:'200 OK',
+ res:{success:true, reservedUntil:"string"}},
+
+{num:35, method:'POST', path:'/internal/stocks/release', group:'internal', badges:['internal'],
+ title:'[Internal] Release Reserved Stock',
+ desc:'Mengembalikan <code>reserved_stock</code> kembali ke <code>stock</code> jika order dibatalkan atau pembayaran kedaluwarsa.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{orderId:"TV-20260920-801A", items:[{productId:201, quantity:1}]},
+ resStatus:'200 OK',
+ res:{success:true, releasedCount:1}},
+
+{num:36, method:'POST', path:'/internal/stocks/commit', group:'internal', badges:['internal'],
+ title:'[Internal] Commit Stock Deduction',
+ desc:'Memotong stok secara permanen dari <code>reserved_stock</code> ketika pembayaran pesanan telah terkonfirmasi lunas.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{orderId:"TV-20260920-801A", items:[{productId:201, quantity:1}]},
+ resStatus:'200 OK',
+ res:{success:true, committedCount:1}},
+
+{num:37, method:'POST', path:'/internal/points/hold-balance', group:'internal', badges:['internal'],
+ title:'[Internal] Hold Saldo Poin',
+ desc:'Memindahkan sejumlah poin dari <code>balance</code> ke <code>locked_balance</code> selama sesi checkout.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{userId:101, amount:50000, orderId:"TV-20260920-801A"},
+ resStatus:'200 OK',
+ res:{success:true, newLockedBalance:50000}},
+
+{num:38, method:'POST', path:'/internal/points/commit-deduct', group:'internal', badges:['internal'],
+ title:'[Internal] Finalisasi Pemotongan Poin',
+ desc:'Mencatat transaksi debit pada buku kas <code>point_ledgers</code> dan menghapus <code>locked_balance</code> secara permanen.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'},{name:'Idempotency-Key',loc:'header',required:true}],
+ req:{userId:101, amount:50000, orderId:"TV-20260920-801A"},
+ resStatus:'200 OK',
+ res:{success:true, newBalance:0, ledgerId:902}},
+
+{num:39, method:'POST', path:'/internal/points/release-balance', group:'internal', badges:['internal'],
+ title:'[Internal] Batalkan Hold Poin',
+ desc:'Mengembalikan <code>locked_balance</code> ke saldo tersedia jika order batal.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{userId:101, amount:50000, orderId:"TV-20260920-801A"},
+ resStatus:'200 OK',
+ res:{success:true}},
+
+{num:40, method:'POST', path:'/internal/points/credit-reward', group:'internal', badges:['internal'],
+ title:'[Internal] Akrual Reward Poin',
+ desc:'Mencatat kredit reward poin 1% pada pesanan selesai ke <code>point_ledgers</code>.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'},{name:'Idempotency-Key',loc:'header',required:true}],
+ req:{userId:101, amount:209740, orderId:"TV-20260920-801A", description:"Reward poin pesanan selesai"},
+ resStatus:'200 OK',
+ res:{success:true, newBalance:259740, ledgerId:903}},
+
+{num:41, method:'POST', path:'/internal/tlater/hold-limit', group:'internal', badges:['internal'],
+ title:'[Internal] Hold Limit Kredit TLater',
+ desc:'Memotong <code>available_limit</code> secara atomik saat checkout pesanan.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{userId:101, amount:5000000.0, orderId:"TV-20260920-801A"},
+ resStatus:'200 OK',
+ res:{success:true, availableLimitAfter:1500000.0}},
+
+{num:42, method:'POST', path:'/internal/tlater/release-limit', group:'internal', badges:['internal'],
+ title:'[Internal] Release Hold Limit TLater',
+ desc:'Mengembalikan <code>available_limit</code> kredit pengguna jika checkout dibatalkan.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{userId:101, amount:5000000.0, orderId:"TV-20260920-801A"},
+ resStatus:'200 OK',
+ res:{success:true, availableLimitAfter:6500000.0}},
+
+{num:43, method:'POST', path:'/internal/tlater/disburse-loan', group:'internal', badges:['internal'],
+ title:'[Internal] Finalisasi Kontrak Pinjaman & Buat Angsuran',
+ desc:'Menerbitkan kontrak pinjaman <code>tlater_loans</code> dan tabel jadwal angsuran <code>tlater_installments</code> saat order berhasil dibayar.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{userId:101, orderId:801, principalAmount:5000000.0, tenorMonths:3},
+ resStatus:'201 OK',
+ res:{loanId:401, loanCode:"LN-20260920-401", installmentsCount:3}},
+
+{num:44, method:'POST', path:'/internal/tlater/admin/init-account', group:'internal', badges:['internal'],
+ title:'[Internal] Inisialisasi Akun TLater Pasca-KYC',
+ desc:'Dipanggil oleh <code>identity-service</code> saat verifikasi KYC berhasil disetujui untuk membuka fasilitas limit kredit.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{userId:101, creditLimit:3000000.0},
+ resStatus:'201 OK',
+ res:{id:301, userId:101, creditLimit:10000000.0, availableLimit:6500000.0, usedLimit:3500000.0, interestRateMonthly:2.5, lateFeeDaily:0.1, status:"active"}},
+
+{num:45, method:'POST', path:'/api/v1/catalog/products/{id}/wishlist', group:'wishlist', badges:['bearer'],
+ title:'Toggle Wishlist Produk',
+ desc:'Menambahkan produk ke wishlist jika belum ada, atau menghapusnya jika sudah tersimpan.',
+ params:[{name:'id',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{productId:201, inWishlist:true, message:"Produk berhasil ditambahkan ke wishlist"}},
+
+{num:46, method:'GET', path:'/api/v1/catalog/wishlist', group:'wishlist', badges:['bearer'],
+ title:'Daftar Wishlist Pengguna',
+ desc:'Mengambil seluruh daftar produk teknologi yang disimpan pengguna.',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:{items:[{id:201, categoryId:1, sku:"APL-IP16P-256", name:"iPhone 16 Pro 256GB - Titanium Black", slug:"iphone-16-pro-256gb-titanium-black", description:"Apple A18 Pro chip, 48MP Fusion camera, USB-C", price:20999000.0, weightGrams:500, status:"active", stock:15, reservedStock:2, images:[{id:501, imageUrl:"https://images.techvibe.id/products/ip16pro.png", isPrimary:true}]}], total:3}},
+
+{num:47, method:'POST', path:'/api/v1/catalog/products/{id}/reviews', group:'catalog-review', badges:['bearer'],
+ title:'Beri Ulasan Produk (Verified Buyer Only)',
+ desc:'Menyimpan rating (1-5) dan review tekstual. Divalidasi via internal RPC ke order-service: hanya user yang telah menyelesaikan pesanan (completed) yang dapat memberi ulasan.',
+ params:[{name:'id',loc:'path',required:true}],
+ req:{orderId:801, rating:5, reviewText:"Barang ori 100%, garansi resmi aktif, packing kayu super aman!"},
+ resStatus:'201 OK',
+ res:{id:1, productId:201, orderId:801, userId:101, rating:5, reviewText:"Barang 100% original, garansi resmi aktif, packaging super aman.", createdAt:"string"}},
+
+{num:48, method:'GET', path:'/api/v1/catalog/products/{id}/reviews', group:'catalog-review', badges:['public'],
+ title:'Daftar Ulasan & Rating Produk',
+ desc:'Mengambil seluruh ulasan pembeli beserta agregasi rating bintang produk.',
+ params:[{name:'id',loc:'path',required:true},{name:'page',loc:'query'},{name:'limit',loc:'query'}], req:null,
+ resStatus:'200 OK',
+ res:{averageRating:4.9, totalReviews:48, items:[{id:1, productId:201, orderId:801, userId:101, rating:5, reviewText:"Barang 100% original, garansi resmi aktif, packaging super aman.", createdAt:"string"}]}},
+
+{num:49, method:'POST', path:'/api/v1/promos/apply', group:'promos', badges:['bearer'],
+ title:'Validasi & Kalkulasi Kode Voucher',
+ desc:'Memvalidasi keaktifan voucher, periode tanggal berlaku, sisa kuota, dan minimal belanja.',
+ params:[], req:{code:"NEWVIBE50", subtotal:20999000.0},
+ resStatus:'200 OK',
+ res:{valid:true, promoId:1, code:"NEWVIBE50", discountAmount:50000.0, payableSubtotal:20949000.0}},
+
+{num:50, method:'GET', path:'/api/v1/promos/active', group:'promos', badges:['public'],
+ title:'Daftar Promo & Voucher Aktif',
+ desc:'Mengambil seluruh kupon diskon dan flash sale yang sedang berlangsung untuk etalase dan checkout.',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:[{id:1, code:"NEWVIBE50", title:"Diskon Pelanggan Baru", promoType:"voucher", discountType:"fixed", discountValue:50000.0, minPurchase:500000.0, maxDiscount:50000.0, quotaRemaining:85, isActive:true}]},
+
+{num:51, method:'POST', path:'/api/v1/admin/promos', group:'promos', badges:['bearer','admin'],
+ title:'Buat Promo Baru (Admin Only)',
+ desc:'Mendaftarkan kupon voucher baru atau event diskon flash sale.',
+ params:[],
+ req:{code:"FLASH20", title:"Flash Sale Weekend", promoType:"flash_sale", discountType:"percentage", discountValue:20.0, minPurchase:1000000.0, maxDiscount:200000.0, quotaTotal:100, startDate:"2026-09-20T00:00:00.000Z", endDate:"2026-09-22T23:59:59.000Z"},
+ resStatus:'201 OK',
+ res:{id:1, code:"NEWVIBE50", title:"Diskon Pelanggan Baru", promoType:"voucher", discountType:"fixed", discountValue:50000.0, minPurchase:500000.0, maxDiscount:50000.0, quotaRemaining:85, isActive:true}},
+
+{num:52, method:'GET', path:'/api/v1/orders/{id}/tracking', group:'logistik', badges:['bearer'],
+ title:'Pelacakan Resi & Status Pengiriman',
+ desc:'Mengambil timeline riwayat perjalanan kurir (manifest, on-transit, delivery) dan nomor resi pengiriman pesanan.',
+ params:[{name:'id',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{orderId:801, courierName:"JNE", courierService:"REG", trackingNumber:"JNE-882940192", status:"on_delivery", insuranceFee:20000.0, trackingTimeline:[{status:"on_delivery", location:"Hub Jakarta Selatan", timestamp:"string"}]}},
+
+{num:53, method:'PATCH', path:'/api/v1/admin/orders/{id}/shipment', group:'logistik', badges:['bearer','admin'],
+ title:'Update Status Resi & Logistik (Admin Only)',
+ desc:'Menginput nomor resi resmi dan mengupdate checkpoint status perjalanan paket pengiriman.',
+ params:[{name:'id',loc:'path',required:true}],
+ req:{courierName:"JNE", courierService:"REG", trackingNumber:"JNE-882940192", status:"shipped", statusNote:"Paket diserahkan ke agen JNE", location:"Jakarta Selatan Hub"},
+ resStatus:'200 OK',
+ res:{orderId:801, status:"shipped", trackingNumber:"JNE-882940192", updatedAt:"string"}},
+
+{num:54, method:'GET', path:'/api/v1/user/addresses', group:'auth-user', badges:['bearer'],
+ title:'Daftar Alamat Pengiriman Pengguna',
+ desc:'Mengambil seluruh buku alamat tersimpan milik user (Rumah, Kantor, dll).',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:[{id:1, userId:101, label:"Rumah", recipientName:"Andara Reyhan", phone:"+6281234567890", fullAddress:"Jl. Sudirman No. 45, RT 01 / RW 02", postalCode:"10220", isPrimary:true}]},
+
+{num:55, method:'POST', path:'/api/v1/user/addresses', group:'auth-user', badges:['bearer'],
+ title:'Tambah Alamat Baru',
+ desc:'Menambahkan alamat pengiriman baru. Jika <code>isPrimary: true</code>, alamat lain otomatis diset false.',
+ params:[],
+ req:{label:"Kantor", recipientName:"Andara Reyhan", phone:"+6281234567890", fullAddress:"Gedung Cyber 2 Lt 18, Jl. HR Rasuna Said", postalCode:"12950", isPrimary:false},
+ resStatus:'201 OK',
+ res:{id:1, userId:101, label:"Rumah", recipientName:"Andara Reyhan", phone:"+6281234567890", fullAddress:"Jl. Sudirman No. 45, RT 01 / RW 02", postalCode:"10220", isPrimary:true}},
+
+{num:56, method:'PATCH', path:'/api/v1/user/addresses/{id}/primary', group:'auth-user', badges:['bearer'],
+ title:'Set Sebagai Alamat Utama',
+ desc:'Mengubah alamat spesifik menjadi default primary address saat checkout.',
+ params:[{name:'id',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{id:2, isPrimary:true, message:"Alamat utama berhasil diperbarui"}},
+
+{num:57, method:'POST', path:'/api/v1/tickets', group:'care', badges:['bearer'],
+ title:'Buat Tiket Bantuan Baru',
+ desc:'Mengajukan komplain, klaim garansi, pertanyaan pengiriman, atau kendala limit TLater.',
+ params:[], req:{subject:"Kendala Garansi Resmi iPhone 16 Pro", category:"warranty", priority:"high", message:"Halo tim Tech Vibe, saya ingin verifikasi nomor seri garansi iBox saya."},
+ resStatus:'201 OK',
+ res:{id:1, ticketNumber:"TVC-20260920-8821", userId:101, subject:"Kendala Garansi Resmi iPhone 16 Pro", category:"warranty", priority:"high", status:"open", createdAt:"string"}},
+
+{num:58, method:'GET', path:'/api/v1/tickets', group:'care', badges:['bearer'],
+ title:'Daftar Tiket Bantuan',
+ desc:'Mengambil seluruh tiket bantuan pengguna. Jika role Admin, mengembalikan seluruh tiket backoffice.',
+ params:[{name:'status',loc:'query'},{name:'category',loc:'query'}], req:null,
+ resStatus:'200 OK',
+ res:{items:[{id:1, ticketNumber:"TVC-20260920-8821", userId:101, subject:"Kendala Garansi Resmi iPhone 16 Pro", category:"warranty", priority:"high", status:"open", createdAt:"string"}], total:2}},
+
+{num:59, method:'POST', path:'/api/v1/tickets/{id}/reply', group:'care', badges:['bearer'],
+ title:'Kirim Balasan Pesan Tiket',
+ desc:'Mengirimkan pesan percakapan lanjutan pada tiket bantuan.',
+ params:[{name:'id',loc:'path',required:true}], req:{message:"Faktur pembelian telah saya unggah via link pendukung."},
+ resStatus:'201 OK',
+ res:{id:10, ticketId:1, senderType:"customer", message:"Faktur pembelian telah saya unggah via link pendukung.", createdAt:"string"}},
+
+{num:60, method:'PATCH', path:'/api/v1/admin/tickets/{id}/status', group:'care', badges:['bearer','admin'],
+ title:'Update Status Tiket (Admin Only)',
+ desc:'Mengubah status tiket menjadi in_progress, resolved, atau closed.',
+ params:[{name:'id',loc:'path',required:true}], req:{status:"in_progress"},
+ resStatus:'200 OK',
+ res:{ticketId:1, status:"in_progress", updatedAt:"string"}},
+
+{num:61, method:'GET', path:'/api/v1/notifications', group:'notifikasi', badges:['bearer'],
+ title:'Daftar Notifikasi Pengguna',
+ desc:'Mengambil notifikasi pesanan, promosi, tagihan TLater, dan tiket bantuan.',
+ params:[], req:null,
+ resStatus:'200 OK',
+ res:{unreadCount:2, items:[{id:1, userId:101, type:"order_update", title:"Pesanan Sedang Dikirim", message:"Pesanan TV-20260920-801A telah diserahkan ke kurir JNE (Resi: JNE-882940192)", isRead:false, createdAt:"string"}]}},
+
+{num:62, method:'PATCH', path:'/api/v1/notifications/{id}/read', group:'notifikasi', badges:['bearer'],
+ title:'Tandai Notifikasi Dibaca',
+ desc:'Mengubah status isRead notifikasi menjadi true.',
+ params:[{name:'id',loc:'path',required:true}], req:null,
+ resStatus:'200 OK',
+ res:{id:1, isRead:true}},
+
+{num:63, method:'POST', path:'/api/v1/internal/notifications/trigger', group:'internal', badges:['internal'],
+ title:'[Internal] Trigger Notifikasi Multi-Layanan',
+ desc:'Dipanggil oleh order-service, tlater-service, atau admin saat terjadi event bisnis penting.',
+ params:[{name:'X-Internal-Service-Key',loc:'header'}],
+ req:{userId:101, type:"order_update", title:"Pesanan Sedang Dikirim", message:"Resi JNE-882940192 telah terbit.", referenceType:"order", referenceId:"TV-20260920-801A"},
+ resStatus:'201 OK',
+ res:{notificationId:1, delivered:true}},
+];
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const badgeMeta = {
+  public:   {label:'Public', cls:'tag-public'},
+  bearer:   {label:'Bearer JWT', cls:'tag-bearer'},
+  admin:    {label:'Admin Only', cls:'tag-admin'},
+  internal: {label:'Internal Service Key', cls:'tag-internal'},
+};
+
+function escHtml(s){
+  return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+
+function pathHtml(path){
+  return path.split('/').map(seg=>{
+    if(!seg) return '';
+    if(seg.startsWith('{') && seg.endsWith('}')) return '<span class="param">/'+escHtml(seg)+'</span>';
+    return '<span class="seg">/'+escHtml(seg)+'</span>';
+  }).join('');
+}
+
+function syntaxHighlight(json){
+  json = json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g, function(match){
+    let cls = 'jn';
+    if(/^"/.test(match)){
+      cls = /:$/.test(match) ? 'jk' : 'js';
+    } else if(/true|false/.test(match)){
+      cls = 'jb';
+    } else if(/null/.test(match)){
+      cls = 'jnull';
+    }
+    return '<span class="'+cls+'">'+match+'</span>';
+  });
+}
+
+function renderEndpoint(ep){
+  const badgesHtml = ep.badges.map(b=>{
+    const m = badgeMeta[b];
+    return '<span class="tag '+m.cls+'">'+m.label+'</span>';
+  }).join('');
+
+  let paramsHtml = '';
+  if(ep.params.length){
+    paramsHtml = '<div class="param-label">PARAMETER &amp; HEADER</div><table class="param-table">' +
+      ep.params.map(p=>{
+        return '<tr><td class="param-name">'+escHtml(p.name)+'<span class="param-loc">'+p.loc+'</span>'+(p.required?'<span class="param-req">wajib</span>':'')+'</td><td class="param-desc">'+(p.desc?escHtml(p.desc):'&mdash;')+'</td></tr>';
+      }).join('') + '</table>';
+  }
+
+  const reqTabHtml = ep.req
+    ? '<pre class="jsonblock">'+syntaxHighlight(JSON.stringify(ep.req, null, 2))+'</pre>'
+    : '<div class="no-body" style="margin:14px;">Tidak ada request body (GET / URL query params)</div>';
+
+  const resTabHtml = '<pre class="jsonblock">'+syntaxHighlight(JSON.stringify(ep.res, null, 2))+'</pre>';
+
+  const uid = 'ep'+ep.num;
+
+  return `
+  <article class="endpoint" id="${uid}" data-group="${ep.group}" data-search="${escHtml((ep.method+' '+ep.path+' '+ep.title+' '+ep.desc).toLowerCase())}">
+    <div class="endpoint-head">
+      <span class="hash">#${ep.num}</span>
+      <span class="method-badge mb-${ep.method}">${ep.method}</span>
+      <span class="endpoint-path">${pathHtml(ep.path)}</span>
+      <div class="tag-row">${badgesHtml}</div>
+    </div>
+    <div class="endpoint-body">
+      <div class="ep-left">
+        <div class="ep-title">${escHtml(ep.title)}</div>
+        <div class="ep-desc">${ep.desc}</div>
+        ${paramsHtml}
+      </div>
+      <div class="ep-right">
+        <div class="code-tabs">
+          <div class="code-tab ${ep.req===null && true ? '' : 'active'} tab-req" data-target="${uid}-req">Request</div>
+          <div class="code-tab tab-res" data-target="${uid}-res">Response</div>
+        </div>
+        <div class="code-panel">
+          <div class="code-panel-inner active" id="${uid}-req">
+            ${ep.req ? `<div class="code-status"><span>application/json</span><button class="copy-btn" data-copy="${uid}-req-raw">salin</button></div>` : ''}
+            ${reqTabHtml}
+          </div>
+          <div class="code-panel-inner" id="${uid}-res">
+            <div class="code-status"><span class="status-ok">${ep.resStatus}</span><button class="copy-btn" data-copy="${uid}-res-raw">salin</button></div>
+            ${resTabHtml}
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>`;
+}
+
+// raw text stash for copy-to-clipboard (avoids re-parsing HTML)
+const rawStash = {};
+
+function buildContent(){
+  const root = document.getElementById('contentRoot');
+  let html = '';
+  GROUPS.forEach(g=>{
+    const items = EP.filter(e=>e.group===g.key);
+    if(!items.length) return;
+    html += `<section class="section-block" data-section="${g.key}">
+      <div class="section-title">${g.label} <span class="cnt">${items.length} endpoint</span></div>
+      ${items.map(renderEndpoint).join('')}
+    </section>`;
+  });
+  root.innerHTML = html;
+
+  // stash raw copy text
+  EP.forEach(ep=>{
+    const uid = 'ep'+ep.num;
+    if(ep.req) rawStash[uid+'-req-raw'] = JSON.stringify(ep.req, null, 2);
+    rawStash[uid+'-res-raw'] = JSON.stringify(ep.res, null, 2);
+  });
+
+  document.getElementById('statTotal').textContent = EP.length;
+  document.getElementById('footCount').textContent = EP.length + ' endpoints verified · ' + GROUPS.length + ' kategori';
+}
+
+function buildNav(){
+  const nav = document.getElementById('navGroups');
+  let html = '';
+  GROUPS.forEach(g=>{
+    const items = EP.filter(e=>e.group===g.key);
+    if(!items.length) return;
+    html += `<div class="nav-group" data-group="${g.key}">
+      <div class="nav-group-head">
+        <span class="nav-group-title">
+          <svg class="nav-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+          ${g.label}
+        </span>
+        <span class="nav-group-count">${items.length}</span>
+      </div>
+      <div class="nav-items">
+        ${items.map(e=>`<div class="nav-item" data-target="ep${e.num}" data-search="${escHtml((e.method+' '+e.path+' '+e.title).toLowerCase())}">
+          <span class="m m-${e.method}">${e.method}</span><span class="p">${escHtml(e.path)}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  nav.innerHTML = html;
+}
+
+function buildFilters(){
+  const bar = document.getElementById('filterBar');
+  let html = `<div class="pill active" data-filter="all">Semua (${EP.length})</div>`;
+  GROUPS.forEach(g=>{
+    const count = EP.filter(e=>e.group===g.key).length;
+    if(!count) return;
+    html += `<div class="pill" data-filter="${g.key}">${g.label} (${count})</div>`;
+  });
+  bar.innerHTML = html;
+
+  bar.querySelectorAll('.pill').forEach(pill=>{
+    pill.addEventListener('click', ()=>{
+      bar.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+      pill.classList.add('active');
+      const f = pill.dataset.filter;
+      document.querySelectorAll('.section-block').forEach(sec=>{
+        sec.style.display = (f==='all' || sec.dataset.section===f) ? '' : 'none';
+      });
+    });
+  });
+}
+
+function wireInteractions(){
+  // collapse nav groups
+  document.querySelectorAll('.nav-group-head').forEach(head=>{
+    head.addEventListener('click', ()=>{
+      head.closest('.nav-group').classList.toggle('collapsed');
+    });
+  });
+
+  // nav item click -> scroll to endpoint + set active filter to "all" so it's visible
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.addEventListener('click', ()=>{
+      document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+      document.querySelector('.pill[data-filter="all"]').classList.add('active');
+      document.querySelectorAll('.section-block').forEach(sec=> sec.style.display = '');
+
+      document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+      item.classList.add('active');
+      const el = document.getElementById(item.dataset.target);
+      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+      closeSidebarMobile();
+    });
+  });
+
+  // code tabs
+  document.getElementById('contentRoot').addEventListener('click', (e)=>{
+    const tab = e.target.closest('.code-tab');
+    if(tab){
+      const panel = tab.closest('.ep-right');
+      panel.querySelectorAll('.code-tab').forEach(t=>t.classList.remove('active'));
+      panel.querySelectorAll('.code-panel-inner').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.target).classList.add('active');
+      return;
+    }
+    const copyBtn = e.target.closest('.copy-btn');
+    if(copyBtn){
+      const key = copyBtn.dataset.copy;
+      const text = rawStash[key] || '';
+      navigator.clipboard.writeText(text).then(()=>{
+        const orig = copyBtn.textContent;
+        copyBtn.textContent = 'tersalin';
+        setTimeout(()=>{ copyBtn.textContent = orig; }, 1200);
+      }).catch(()=>{});
+    }
+  });
+
+  // search
+  const searchInput = document.getElementById('searchInput');
+  searchInput.addEventListener('input', ()=>{
+    const q = searchInput.value.trim().toLowerCase();
+    document.querySelectorAll('.nav-group').forEach(group=>{
+      let anyVisible = false;
+      group.querySelectorAll('.nav-item').forEach(item=>{
+        const match = !q || item.dataset.search.includes(q);
+        item.style.display = match ? '' : 'none';
+        if(match) anyVisible = true;
+      });
+      group.style.display = anyVisible ? '' : 'none';
+      if(q && anyVisible) group.classList.remove('collapsed');
+    });
+
+    // also filter main content
+    document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    document.querySelector('.pill[data-filter="all"]').classList.add('active');
+    document.querySelectorAll('.section-block').forEach(sec=>{
+      let anyVisible = false;
+      sec.querySelectorAll('.endpoint').forEach(ep=>{
+        const match = !q || ep.dataset.search.includes(q);
+        ep.style.display = match ? '' : 'none';
+        if(match) anyVisible = true;
+      });
+      sec.style.display = anyVisible ? '' : 'none';
+    });
+  });
+
+  // scrollspy
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+        const match = document.querySelector('.nav-item[data-target="'+entry.target.id+'"]');
+        if(match) match.classList.add('active');
+      }
+    });
+  }, {rootMargin: '-15% 0px -70% 0px'});
+  document.querySelectorAll('.endpoint').forEach(ep=>observer.observe(ep));
+
+  // mobile sidebar
+  const sidebar = document.getElementById('sidebar');
+  const menuBtn = document.getElementById('menuBtn');
+  const scrim = document.getElementById('scrim');
+  menuBtn.addEventListener('click', ()=>{
+    sidebar.classList.add('open');
+    scrim.classList.add('show');
+  });
+  scrim.addEventListener('click', closeSidebarMobile);
+}
+function closeSidebarMobile(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('scrim').classList.remove('show');
+}
+
+buildContent();
+buildNav();
+buildFilters();
+wireInteractions();
+</script>
+</body>
+</html>
