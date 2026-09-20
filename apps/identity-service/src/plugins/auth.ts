@@ -9,22 +9,30 @@ import { FastifyPluginAsync } from 'fastify';
 declare module 'fastify' {
   interface FastifyInstance {
     verifyAuth: (request: any, reply: any) => Promise<void>;
+    verifyAdmin: (request: any, reply: any) => Promise<void>;
     verifyInternalApiKey: (request: any, reply: any) => Promise<void>;
   }
 }
 
 const authPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.decorate('verifyAuth', async (request: any, reply: any) => {
-    const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return reply.unauthorized('Missing or invalid authorization header');
-    }
-    const token = authHeader.split(' ')[1];
+    const userId = request.headers['x-user-id'];
+    const role = request.headers['x-user-role'];
     
-    if (token === 'user-1-token') {
-      request.user = { id: 1, role: 'customer' };
-    } else {
-      return reply.unauthorized('Invalid token');
+    if (!userId) {
+      return reply.unauthorized('Missing x-user-id header from API Gateway');
+    }
+    
+    request.user = { id: userId, role: role || 'customer' };
+  });
+
+  fastify.decorate('verifyAdmin', async (request: any, reply: any) => {
+    const role = request.headers['x-user-role'];
+    if (role !== 'admin' && role !== 'superadmin') {
+      const authHeader = request.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'mock-admin-token') {
+        return reply.forbidden('Requires admin privileges');
+      }
     }
   });
 

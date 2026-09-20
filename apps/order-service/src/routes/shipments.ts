@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
@@ -5,7 +10,6 @@ import { PrismaClient } from '@tech-vibe/database';
 const prisma = new PrismaClient();
 
 const shipmentRoutes: FastifyPluginAsync = async (fastify) => {
-  // Public Endpoint: Get tracking info
   fastify.get('/:id/tracking', {
     schema: {
       params: Type.Object({
@@ -50,7 +54,6 @@ const shipmentRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  // Admin Endpoint: Update shipment and append to timeline
   fastify.patch('/admin/orders/:id/shipment', {
     preHandler: fastify.verifyAdmin,
     schema: {
@@ -87,7 +90,6 @@ const shipmentRoutes: FastifyPluginAsync = async (fastify) => {
       return fastify.httpErrors.notFound('Order not found');
     }
 
-    // Process shipment update in transaction to safely update both Order and Shipment
     const updatedOrder = await prisma.$transaction(async (tx: any) => {
       let shipment = order.shipment;
       const timelineArr: any[] = Array.isArray(shipment?.timelineJson) 
@@ -121,7 +123,6 @@ const shipmentRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Sync Order Status
       let newOrderStatus = order.status;
       if (currentShipment.shippingStatus === 'in_transit') {
         newOrderStatus = 'shipped';

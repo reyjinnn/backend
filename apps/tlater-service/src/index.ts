@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import Fastify from 'fastify';
 import sensible from '@fastify/sensible';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
@@ -11,11 +16,9 @@ const buildServer = async () => {
     logger: false, // We'll use our custom logger or disable default to keep logs clean
   }).withTypeProvider<TypeBoxTypeProvider>();
 
-  // Register plugins
   await fastify.register(sensible);
   await fastify.register(authPlugin);
 
-  // Register routes
   await fastify.register(tlaterRoutes);
 
   return fastify;
@@ -26,7 +29,6 @@ const start = async () => {
     const server = await buildServer();
     const port = process.env.PORT_TLATER_SERVICE ? parseInt(process.env.PORT_TLATER_SERVICE, 10) : 3005;
     
-    // Initialize cron jobs
     initLateFeeCron();
     logger.info('Late fee cron job initialized');
 

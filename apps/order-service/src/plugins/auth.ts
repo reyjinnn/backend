@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
 
@@ -23,7 +28,6 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.decorate('verifyAdmin', async (request: any, reply: any) => {
     const role = request.headers['x-user-role'];
     if (role !== 'admin' && role !== 'superadmin') {
-      // fallback to check token for dev
       const authHeader = request.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== 'mock-admin-token') {
         return reply.forbidden('Requires admin privileges');

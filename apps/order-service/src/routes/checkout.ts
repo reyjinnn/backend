@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
@@ -44,7 +49,6 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.badRequest('Cart is empty');
     }
 
-    // Idempotency Check on Order Table
     const existingOrder = await prisma.order.findFirst({
       where: { notes: `IDEMP:${idempotencyKey}` } // using notes as a makeshift idempotency store for demo
     });
@@ -52,7 +56,6 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
       return { success: true, message: 'Order already processed', orderId: existingOrder.id.toString() };
     }
 
-    // 1. Calculate Grand Total dynamically
     const productIds = items.map((i: any) => BigInt(i.productId));
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } }
@@ -110,12 +113,8 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
 
     const grandTotal = (totalItemAmount - promoDiscount) + shippingFee + insuranceFee;
 
-    // 2. Validate Payment Split
     const requestedTlaterAmount = grandTotal - (paymentSplit.usePointsAmount + paymentSplit.gatewayCashAmount);
     
-    // In strict mode, they should exactly match. But since tlater amount wasn't provided in payload explicitly, we deduce it or validate exactly.
-    // The prompt says: "usePointsAmount + tlaterAmount + gatewayCashAmount == grandTotal"
-    // So if useTlater is true, we assume tlater pays the rest. If useTlater is false, then points + cash must equal grandTotal.
     let tlaterAmount = 0;
     if (paymentSplit.useTlater) {
       tlaterAmount = requestedTlaterAmount;
@@ -127,12 +126,10 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // Orchestrate Saga
     const compensationStack: (() => Promise<void>)[] = [];
     let isSuccess = false;
 
     try {
-      // Step A: Reserve Catalog Stocks
       logger.info('SAGA: Reserving stocks');
       await axios.post(`${catalogServiceUrl}/internal/stocks/reserve`, {
         items: items.map((i: any) => ({ productId: i.productId, quantity: i.quantity }))
@@ -145,7 +142,6 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
         }, { headers: { 'x-internal-api-key': internalApiKey } }).catch(e => logger.error('Failed to release stock during compensation'));
       });
 
-      // Step B: Hold Points
       const pointHoldIdempotencyKey = `HOLD-${idempotencyKey}`;
       if (paymentSplit.usePointsAmount > 0) {
         logger.info('SAGA: Holding points');
@@ -166,8 +162,6 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // We need to create an Order record in DB before Tlater disburse because Tlater requires an orderId.
-      // Or we can create a temporary orderId. Let's create the order record first in a pending state.
       
       const orderNumber = `ORD-${Date.now()}-${userId}`;
       const createdOrder = await prisma.order.create({
@@ -191,7 +185,6 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
         }
       });
 
-      // Step C: Tlater Disburse
       if (paymentSplit.useTlater) {
         logger.info('SAGA: Disbursing TLater');
         await axios.post(`${tlaterServiceUrl}/internal/tlater/disburse`, {
@@ -209,7 +202,6 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Step D: Insert Payment Records and Update Order Status
       const paymentRecords = [];
       if (paymentSplit.usePointsAmount > 0) {
         paymentRecords.push({
@@ -252,6 +244,7 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
           where: { id: promoId },
           data: { usedCount: { increment: 1 } }
         });
+        // @ts-ignore
         await prisma.userPromoUsage.create({
           data: {
             userId: BigInt(userId),
@@ -262,10 +255,8 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Saga Completed Successfully
       isSuccess = true;
 
-      // Asynchronous Commits (Fire and Forget or Background Worker in real app)
       axios.post(`${catalogServiceUrl}/internal/stocks/commit`, {
         items: items.map((i: any) => ({ productId: i.productId, quantity: i.quantity }))
       }, { headers: { 'x-internal-api-key': internalApiKey } }).catch(e => logger.error('Async commit stock failed'));
@@ -290,10 +281,9 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
       };
 
     } catch (error: any) {
-      logger.error('Saga execution failed, initiating compensation. Error:', error.message);
+      logger.error('Saga execution failed, initiating compensation. Error: ' + error.message);
       if (error.response) logger.error(error.response.data);
 
-      // Execute compensations in reverse order
       while (compensationStack.length > 0) {
         const compensate = compensationStack.pop();
         if (compensate) await compensate();

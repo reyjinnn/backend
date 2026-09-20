@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import buildServer from '../src/index';
 import { PrismaClient } from '@tech-vibe/database';
@@ -13,7 +18,6 @@ describe('Stock Concurrency (Row-Level Locking)', () => {
     app = await buildServer();
     await app.ready();
 
-    // Setup test product and stock
     const category = await prisma.category.create({
       data: {
         name: 'Test Category',
@@ -41,7 +45,6 @@ describe('Stock Concurrency (Row-Level Locking)', () => {
   });
 
   afterAll(async () => {
-    // Cleanup
     await prisma.productStock.deleteMany({ where: { productId: BigInt(testProductId) } });
     await prisma.product.deleteMany({ where: { id: BigInt(testProductId) } });
     await app.close();
@@ -50,7 +53,6 @@ describe('Stock Concurrency (Row-Level Locking)', () => {
   it('should only allow 1 successful reservation out of 20 concurrent requests', async () => {
     const concurrentRequests = 20;
     
-    // Create 20 promises simulating concurrent requests to reserve 1 item
     const requests = Array.from({ length: concurrentRequests }).map(() => {
       return app.inject({
         method: 'POST',
@@ -69,12 +71,9 @@ describe('Stock Concurrency (Row-Level Locking)', () => {
     const successResponses = responses.filter(r => r.statusCode === 200);
     const conflictResponses = responses.filter(r => r.statusCode === 409);
     
-    // Exactly 1 request should succeed
     expect(successResponses.length).toBe(1);
-    // The rest (19) should fail with 409 Conflict
     expect(conflictResponses.length).toBe(concurrentRequests - 1);
 
-    // Verify database state: stock = 1, reserved_stock = 1
     const stockRow = await prisma.productStock.findUnique({
       where: { productId: BigInt(testProductId) }
     });

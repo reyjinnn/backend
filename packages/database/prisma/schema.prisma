@@ -1,3 +1,4 @@
+// © 2026 @reyjinnn. All rights reserved.
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,9 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ----------------------------------------------------------------------------
-// 1. IDENTITAS & KYC
-// ----------------------------------------------------------------------------
 model User {
   id             BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
   name           String        @db.VarChar(150)
@@ -74,9 +72,6 @@ enum KycStatus {
   rejected
 }
 
-// ----------------------------------------------------------------------------
-// 2. KATALOG & INVENTORI (DENGAN ISOLASI STOK)
-// ----------------------------------------------------------------------------
 model Category {
   id          Int        @id @default(autoincrement()) @db.UnsignedInt
   name        String     @db.VarChar(100)
@@ -149,9 +144,6 @@ model ProductImage {
   @@map("product_images")
 }
 
-// ----------------------------------------------------------------------------
-// 3. ORDERS, ITEMS, & SPLIT PAYMENT
-// ----------------------------------------------------------------------------
 model Order {
   id               BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
   orderNumber      String      @unique @map("order_number") @db.VarChar(50)
@@ -234,9 +226,6 @@ enum PaymentStatus {
   refunded
 }
 
-// ----------------------------------------------------------------------------
-// 4. DOMPET & BUKU KAS POIN LOYALITAS
-// ----------------------------------------------------------------------------
 model PointWallet {
   userId         BigInt   @id @map("user_id") @db.UnsignedBigInt
   balance        BigInt   @default(0) @db.UnsignedBigInt
@@ -287,9 +276,6 @@ enum LedgerStatus {
   cancelled
 }
 
-// ----------------------------------------------------------------------------
-// 5. ENGINE TLATER (PAYLATER, LOANS, INSTALLMENTS)
-// ----------------------------------------------------------------------------
 model TlaterAccount {
   id                  BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
   userId              BigInt        @unique @map("user_id") @db.UnsignedBigInt
@@ -385,9 +371,6 @@ model TlaterRepayment {
   @@map("tlater_repayments")
 }
 
-// ----------------------------------------------------------------------------
-// 6. MULTI-ADDRESS, WISHLIST, REVIEWS
-// ----------------------------------------------------------------------------
 model UserAddress {
   id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   userId         BigInt   @map("user_id") @db.UnsignedBigInt
@@ -435,9 +418,6 @@ model ProductReview {
   @@map("product_reviews")
 }
 
-// ----------------------------------------------------------------------------
-// 7. PROMO ENGINE & USAGE
-// ----------------------------------------------------------------------------
 model Promo {
   id             BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
   name           String      @db.VarChar(150)
@@ -512,9 +492,6 @@ model UserPromoUsage {
   @@map("user_promo_usages")
 }
 
-// ----------------------------------------------------------------------------
-// 8. SHIPMENTS, TICKETS & NOTIFICATIONS
-// ----------------------------------------------------------------------------
 model OrderShipment {
   id             BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   orderId        BigInt          @unique @map("order_id") @db.UnsignedBigInt

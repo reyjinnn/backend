@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import Fastify from 'fastify';
 import sensible from '@fastify/sensible';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
@@ -10,11 +15,9 @@ const buildServer = async () => {
     logger: false, // We'll use our custom logger or disable default to keep logs clean
   }).withTypeProvider<TypeBoxTypeProvider>();
 
-  // Register plugins
   await fastify.register(sensible);
   await fastify.register(authPlugin);
 
-  // Register routes
   await fastify.register(pointsRoutes);
 
   return fastify;

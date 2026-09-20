@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { buildServer } from "../src/index";
 import { FastifyInstance } from "fastify";
@@ -25,6 +30,13 @@ vi.mock("@tech-vibe/database", () => {
         create: mockUserProfileCreate,
         update: mockUserProfileUpdate,
       };
+    },
+    TicketCategory: {
+      general_inquiry: "general_inquiry",
+      complaint: "complaint",
+      bug_report: "bug_report",
+      billing: "billing",
+      feature_request: "feature_request",
     },
   };
 });

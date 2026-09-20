@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import Redis from 'ioredis';
@@ -21,7 +26,6 @@ const cartRoutes: FastifyPluginAsync = async (fastify) => {
 
     const cartKey = `cart:${userId}`;
     
-    // Check if product exists in catalog
     const product = await prisma.product.findUnique({
       where: { id: BigInt(productId) },
       include: { stock: true }
@@ -34,7 +38,6 @@ const cartRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.conflict('Insufficient stock');
     }
 
-    // Store in redis hash: key=cart:userId, field=productId, value=quantity
     const currentQtyStr = await redis.hget(cartKey, productId);
     const newQty = currentQtyStr ? parseInt(currentQtyStr, 10) + quantity : quantity;
 
@@ -60,7 +63,6 @@ const cartRoutes: FastifyPluginAsync = async (fastify) => {
       return { data: { items: [], total: 0 } };
     }
 
-    // Fetch product details from DB
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
       include: { stock: true }

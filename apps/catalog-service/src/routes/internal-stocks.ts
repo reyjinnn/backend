@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
@@ -6,7 +11,6 @@ const prisma = new PrismaClient();
 
 const internalStocksRoutes: FastifyPluginAsync = async (fastify) => {
   
-  // Protect all internal stock routes with the internal API key middleware
   fastify.addHook('preHandler', fastify.verifyInternalApiKey);
 
   fastify.post('/internal/stocks/reserve', {
@@ -22,7 +26,6 @@ const internalStocksRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const { items, reservationMinutes } = request.body as any;
     
-    // Sort items by productId to prevent deadlocks when locking multiple rows
     const sortedItems = [...items].sort((a, b) => {
       const idA = BigInt(a.productId);
       const idB = BigInt(b.productId);
@@ -34,7 +37,6 @@ const internalStocksRoutes: FastifyPluginAsync = async (fastify) => {
         for (const item of sortedItems) {
           const productId = BigInt(item.productId);
           
-          // Row-level lock: SELECT ... FOR UPDATE
           const lockedRows: any[] = await tx.$queryRaw`
             SELECT product_id, stock, reserved_stock 
             FROM product_stocks 
@@ -53,7 +55,6 @@ const internalStocksRoutes: FastifyPluginAsync = async (fastify) => {
             throw new Error(`INSUFFICIENT_STOCK:${item.productId}`);
           }
 
-          // Atomic update
           await tx.productStock.update({
             where: { productId },
             data: { reservedStock: { increment: item.quantity } }

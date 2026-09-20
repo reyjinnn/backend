@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 
@@ -7,7 +12,6 @@ export interface InternalAuthPluginOptions {
 
 const internalAuth: FastifyPluginAsync<InternalAuthPluginOptions> = async (fastify, options) => {
   fastify.addHook('onRequest', async (request, reply) => {
-    // Only apply to /internal/* routes
     if (request.url.startsWith('/internal/')) {
       const token = request.headers['x-internal-token'];
       if (!token || token !== options.internalToken) {

@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fastify from 'fastify';
 import sensible from '@fastify/sensible';

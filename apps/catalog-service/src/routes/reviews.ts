@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
@@ -5,7 +10,6 @@ import { PrismaClient } from '@tech-vibe/database';
 const prisma = new PrismaClient();
 
 const reviewRoutes: FastifyPluginAsync = async (fastify) => {
-  // Add a product review
   fastify.post('/products/:id/reviews', {
     preHandler: fastify.verifyAuth,
     schema: {
@@ -27,7 +31,6 @@ const reviewRoutes: FastifyPluginAsync = async (fastify) => {
     const userBigInt = BigInt(userId);
     const orderBigInt = BigInt(orderId);
 
-    // Validate that the user actually ordered this product and it is completed
     const orderItem = await prisma.orderItem.findFirst({
       where: {
         productId: productId,
@@ -43,7 +46,6 @@ const reviewRoutes: FastifyPluginAsync = async (fastify) => {
       return fastify.httpErrors.badRequest('You can only review products from completed orders.');
     }
 
-    // Ensure the user hasn't already reviewed this product for this order
     const existingReview = await prisma.productReview.findFirst({
       where: {
         productId: productId,
@@ -56,7 +58,6 @@ const reviewRoutes: FastifyPluginAsync = async (fastify) => {
       return fastify.httpErrors.conflict('You have already reviewed this product for this order.');
     }
 
-    // Create review and update product avg in a transaction
     const review = await prisma.$transaction(async (tx: any) => {
       const createdReview = await tx.productReview.create({
         data: {
@@ -68,7 +69,6 @@ const reviewRoutes: FastifyPluginAsync = async (fastify) => {
         }
       });
 
-      // Recalculate average rating
       const aggregations = await tx.productReview.aggregate({
         where: { productId },
         _avg: { rating: true },
@@ -101,7 +101,6 @@ const reviewRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // Get product reviews
   fastify.get('/products/:id/reviews', {
     schema: {
       params: Type.Object({

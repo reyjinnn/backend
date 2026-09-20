@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
@@ -7,9 +12,6 @@ const prisma = new PrismaClient();
 
 const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
   
-  // ===========================================================================
-  // PUBLIC ENDPOINTS
-  // ===========================================================================
 
   fastify.get('/tlater/account', {
     preHandler: fastify.verifyAuth
@@ -82,7 +84,6 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const result = await prisma.$transaction(async (tx: any) => {
-        // Lock installment
         const installments: any[] = await tx.$queryRaw`
           SELECT id, loan_id, principal_due, total_due, total_paid, status 
           FROM tlater_installments 
@@ -98,7 +99,6 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
         const requiredAmount = parseFloat(installment.total_due);
         const isFullyPaid = newTotalPaid >= requiredAmount;
 
-        // Update installment
         await tx.tlaterInstallment.update({
           where: { id: BigInt(installmentId) },
           data: {
@@ -108,7 +108,6 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
           }
         });
 
-        // Create repayment record
         const repayment = await tx.tlaterRepayment.create({
           data: {
             installmentId: BigInt(installmentId),
@@ -117,7 +116,6 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
           }
         });
 
-        // If installment is fully paid, restore available limit by principal due
         if (isFullyPaid) {
           const loan = await tx.tlaterLoan.findUnique({ where: { id: BigInt(installment.loan_id) } });
           if (loan) {
@@ -126,7 +124,6 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
               data: { availableLimit: { increment: parseFloat(installment.principal_due) } }
             });
 
-            // Check if all installments are paid
             const remainingInstallments = await tx.tlaterInstallment.count({
               where: { loanId: loan.id, status: { not: 'paid' } }
             });
@@ -151,9 +148,6 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // ===========================================================================
-  // INTERNAL ENDPOINTS
-  // ===========================================================================
 
   fastify.post('/internal/tlater/disburse', {
     preHandler: fastify.verifyInternalApiKey,
@@ -175,7 +169,6 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const loan = await prisma.$transaction(async (tx: any) => {
-        // Lock account
         const accounts: any[] = await tx.$queryRaw`
           SELECT id, available_limit, status FROM tlater_accounts 
           WHERE user_id = ${BigInt(userId)} FOR UPDATE
@@ -187,16 +180,13 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
         if (account.status !== 'active') throw new Error('ACCOUNT_NOT_ACTIVE');
         if (parseFloat(account.available_limit) < amount) throw new Error('INSUFFICIENT_LIMIT');
 
-        // Calculate fees and installments using utility
         const calcResult = calculateTLaterLoan(amount, tenorMonths);
         
-        // Deduct limit
         await tx.tlaterAccount.update({
           where: { id: BigInt(account.id) },
           data: { availableLimit: { decrement: amount } }
         });
 
-        // Create Loan
         const newLoan = await tx.tlaterLoan.create({
           data: {
             accountId: BigInt(account.id),
@@ -212,10 +202,8 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
           }
         });
 
-        // Create Installments
         const installmentsToCreate = calcResult.installments.map(inst => {
           const dueDate = new Date();
-          // Adding ~30 days per installment number for simplification
           dueDate.setDate(dueDate.getDate() + (30 * inst.installmentNumber));
           
           return {
@@ -256,7 +244,6 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       await prisma.$transaction(async (tx: any) => {
-        // Find active loan for this order
         const loan = await tx.tlaterLoan.findUnique({
           where: { orderId: BigInt(orderId) }
         });
@@ -265,26 +252,22 @@ const tlaterRoutes: FastifyPluginAsync = async (fastify) => {
           throw new Error('LOAN_NOT_CANCELLABLE');
         }
 
-        // Lock account to restore limit
         const accounts: any[] = await tx.$queryRaw`
           SELECT id, available_limit FROM tlater_accounts 
           WHERE id = ${loan.accountId} FOR UPDATE
         `;
 
         if (accounts.length > 0) {
-          // Restore available limit
           await tx.tlaterAccount.update({
             where: { id: loan.accountId },
             data: { availableLimit: { increment: loan.principalAmount } }
           });
         }
 
-        // Delete unpaid installments
         await tx.tlaterInstallment.deleteMany({
           where: { loanId: loan.id, status: 'unpaid' }
         });
 
-        // Delete the loan
         await tx.tlaterLoan.delete({
           where: { id: loan.id }
         });

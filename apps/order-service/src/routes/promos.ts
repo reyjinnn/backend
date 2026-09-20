@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
@@ -5,7 +10,6 @@ import { PrismaClient } from '@tech-vibe/database';
 const prisma = new PrismaClient();
 
 const promoRoutes: FastifyPluginAsync = async (fastify) => {
-  // Apply Promo
   fastify.post('/promos/apply', {
     preHandler: (fastify as any).verifyAuth,
     schema: {
@@ -53,11 +57,9 @@ const promoRoutes: FastifyPluginAsync = async (fastify) => {
     } else if (promo.valueType === 'nominal') {
       discountAmount = promoValue;
     } else if (promo.valueType === 'poin') {
-      // Diskon otomatis cashback poin, tidak potong subtotal di sini
       discountAmount = 0; 
     }
 
-    // Prevent discount > subtotal
     if (discountAmount > subtotal) {
       discountAmount = subtotal;
     }
@@ -71,7 +73,6 @@ const promoRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  // Get Active Promos
   fastify.get('/promos/active', async (request, reply) => {
     const now = new Date();
     const promos = await prisma.promo.findMany({
@@ -82,13 +83,11 @@ const promoRoutes: FastifyPluginAsync = async (fastify) => {
       }
     });
 
-    // Filter by quota manually if needed, but we can return all active
     const activePromos = promos.filter((p: any) => p.quota === null || p.quota > p.usedCount);
 
     return { promos: activePromos };
   });
 
-  // Create Promo (Admin)
   fastify.post('/admin/promos', {
     preHandler: [(fastify as any).verifyAuth, (fastify as any).verifyRole?.(['admin', 'superadmin'])].filter(Boolean),
     schema: {

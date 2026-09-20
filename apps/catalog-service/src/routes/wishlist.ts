@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
@@ -5,7 +10,6 @@ import { PrismaClient } from '@tech-vibe/database';
 const prisma = new PrismaClient();
 
 const wishlistRoutes: FastifyPluginAsync = async (fastify) => {
-  // Add or remove product from wishlist
   fastify.post('/products/:id/wishlist', {
     preHandler: fastify.verifyAuth,
     schema: {
@@ -58,7 +62,6 @@ const wishlistRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // Get user's wishlist
   fastify.get('/wishlist', {
     preHandler: fastify.verifyAuth
   }, async (request, reply) => {

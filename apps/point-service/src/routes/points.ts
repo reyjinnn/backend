@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
@@ -6,9 +11,6 @@ const prisma = new PrismaClient();
 
 const pointsRoutes: FastifyPluginAsync = async (fastify) => {
   
-  // ===========================================================================
-  // PUBLIC ENDPOINTS
-  // ===========================================================================
 
   fastify.get('/points/wallet', {
     preHandler: fastify.verifyAuth
@@ -81,9 +83,6 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  // ===========================================================================
-  // INTERNAL ENDPOINTS (Idempotent & Double-Entry Ledger)
-  // ===========================================================================
   
   fastify.post('/internal/points/hold-balance', {
     preHandler: fastify.verifyInternalApiKey,
@@ -102,7 +101,6 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
     const idempotencyKey = request.headers['idempotency-key'] as string;
     const holdAmount = BigInt(amount);
 
-    // 1. Idempotency Check
     const existingLedger = await prisma.pointLedger.findUnique({
       where: { idempotencyKey }
     });
@@ -111,10 +109,8 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
       return { data: { message: 'Hold already processed', ledgerId: existingLedger.id.toString() } };
     }
 
-    // 2. Transaction: Lock wallet, check balance, update lockedBalance, create PENDING ledger
     try {
       const ledger = await prisma.$transaction(async (tx: any) => {
-        // Lock row
         const wallets: any[] = await tx.$queryRaw`
           SELECT balance, locked_balance FROM point_wallets 
           WHERE user_id = ${BigInt(userId)} FOR UPDATE
@@ -131,13 +127,11 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
           throw new Error('INSUFFICIENT_BALANCE');
         }
 
-        // Update locked balance
         await tx.pointWallet.update({
           where: { userId: BigInt(userId) },
           data: { lockedBalance: { increment: holdAmount } }
         });
 
-        // Create PENDING ledger (no balance deducted yet, balanceAfter reflects current balance)
         const newLedger = await tx.pointLedger.create({
           data: {
             userId: BigInt(userId),
@@ -181,7 +175,6 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
     const commitIdempotencyKey = request.headers['idempotency-key'] as string;
     const commitAmount = BigInt(amount);
 
-    // 1. Idempotency Check on Commit Request
     const existingCommitLedger = await prisma.pointLedger.findUnique({
       where: { idempotencyKey: commitIdempotencyKey }
     });
@@ -190,10 +183,8 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
       return { data: { message: 'Commit already processed', ledgerId: existingCommitLedger.id.toString() } };
     }
 
-    // 2. Transaction
     try {
       const ledger = await prisma.$transaction(async (tx: any) => {
-        // Lock row
         const wallets: any[] = await tx.$queryRaw`
           SELECT balance, locked_balance FROM point_wallets 
           WHERE user_id = ${BigInt(userId)} FOR UPDATE
@@ -201,7 +192,6 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
 
         if (wallets.length === 0) throw new Error('WALLET_NOT_FOUND');
 
-        // Deduct from both balance and locked_balance
         const updatedWallet = await tx.pointWallet.update({
           where: { userId: BigInt(userId) },
           data: { 
@@ -210,13 +200,11 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
           }
         });
 
-        // Mark the hold ledger as completed
         await tx.pointLedger.update({
           where: { idempotencyKey: holdIdempotencyKey },
           data: { status: 'completed' }
         });
 
-        // Create the COMMIT ledger entry to reflect the actual balance change
         const commitLedger = await tx.pointLedger.create({
           data: {
             userId: BigInt(userId),
@@ -259,7 +247,6 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
     const releaseIdempotencyKey = request.headers['idempotency-key'] as string;
     const releaseAmount = BigInt(amount);
 
-    // 1. Idempotency Check
     const existingReleaseLedger = await prisma.pointLedger.findUnique({
       where: { idempotencyKey: releaseIdempotencyKey }
     });
@@ -270,7 +257,6 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const ledger = await prisma.$transaction(async (tx: any) => {
-        // Lock row
         await tx.$queryRaw`SELECT balance FROM point_wallets WHERE user_id = ${BigInt(userId)} FOR UPDATE`;
 
         const updatedWallet = await tx.pointWallet.update({
@@ -278,13 +264,11 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
           data: { lockedBalance: { decrement: releaseAmount } }
         });
 
-        // Cancel the hold
         await tx.pointLedger.update({
           where: { idempotencyKey: holdIdempotencyKey },
           data: { status: 'cancelled' }
         });
 
-        // Create a release ledger to audit the cancellation
         const releaseLedger = await tx.pointLedger.create({
           data: {
             userId: BigInt(userId),
@@ -325,13 +309,11 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
     const idempotencyKey = request.headers['idempotency-key'] as string;
     const rewardAmount = BigInt(amount);
 
-    // 1. Validasi Idempotency-Key
     const existingLedger = await prisma.pointLedger.findUnique({
       where: { idempotencyKey }
     });
 
     if (existingLedger) {
-      // Jika kunci sudah pernah diproses, kembalikan data mutasi sebelumnya tanpa menduplikasi kredit
       return { 
         data: { 
           message: 'Reward already accrued', 
@@ -345,7 +327,6 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const ledger = await prisma.$transaction(async (tx: any) => {
-      // Create wallet if not exist to prevent error on first time reward
       let wallet = await tx.pointWallet.findUnique({
         where: { userId: BigInt(userId) }
       });
@@ -355,7 +336,6 @@ const pointsRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Lock row
       await tx.$queryRaw`SELECT balance FROM point_wallets WHERE user_id = ${BigInt(userId)} FOR UPDATE`;
 
       const updatedWallet = await tx.pointWallet.update({

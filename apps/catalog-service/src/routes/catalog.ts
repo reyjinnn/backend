@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import { FastifyPluginAsync } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { PrismaClient } from '@tech-vibe/database';
@@ -5,7 +10,6 @@ import { PrismaClient } from '@tech-vibe/database';
 const prisma = new PrismaClient();
 
 const catalogRoutes: FastifyPluginAsync = async (fastify) => {
-  // Public Endpoint: Search products
   fastify.get('/products', {
     schema: {
       querystring: Type.Object({
@@ -70,7 +74,6 @@ const catalogRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  // Public Endpoint: Product detail
   fastify.get('/products/:id', {
     schema: {
       params: Type.Object({
@@ -107,7 +110,6 @@ const catalogRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  // Admin Endpoint: Create product
   fastify.post('/admin/products', {
     preHandler: fastify.verifyAdmin,
     schema: {
@@ -125,7 +127,6 @@ const catalogRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const { categoryId, sku, name, slug, description, price, weightGrams, initialStock } = request.body as any;
     
-    // Create product and stock in a transaction
     const product = await prisma.$transaction(async (tx: any) => {
       const createdProduct = await tx.product.create({
         data: {
@@ -158,7 +159,6 @@ const catalogRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // Admin Endpoint: Update product
   fastify.put('/admin/products/:id', {
     preHandler: fastify.verifyAdmin,
     schema: {
@@ -198,7 +198,6 @@ const catalogRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // Admin Endpoint: Restock product
   fastify.patch('/admin/products/:id/stock', {
     preHandler: fastify.verifyAdmin,
     schema: {

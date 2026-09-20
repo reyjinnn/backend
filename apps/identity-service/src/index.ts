@@ -1,3 +1,8 @@
+/**
+ * Tech Vibe Core Engine
+ * © 2026 @reyjinnn
+ * This project is exclusively owned by @reyjinnn.
+ */
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
@@ -10,6 +15,10 @@ import { PrismaClient } from "@tech-vibe/database";
 
 import { authRoutes } from "./routes/auth";
 import { kycRoutes } from "./routes/kyc";
+import authPlugin from "./plugins/auth";
+import addressRoutes from "./routes/addresses";
+import ticketRoutes from "./routes/tickets";
+import notificationRoutes from "./routes/notifications";
 
 const prisma = new PrismaClient();
 
@@ -48,8 +57,13 @@ export const buildServer = async () => {
 
   server.decorate("prisma", prisma);
 
+  await server.register(authPlugin);
+
   server.register(authRoutes, { prefix: "/api/v1/auth" });
   server.register(kycRoutes, { prefix: "/api/v1/kyc" });
+  server.register(addressRoutes, { prefix: "/api/v1/user/addresses" });
+  server.register(ticketRoutes, { prefix: "/api/v1" });
+  server.register(notificationRoutes, { prefix: "/api/v1" });
 
   return server;
 };
