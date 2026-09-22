@@ -79,13 +79,20 @@ pnpm install
 Copy `.env.example` to `.env` in the root folder, and also in every `apps/*` and `packages/database` directory if needed.
 Ensure your Database and Redis configurations are correct in `.env`:
 ```env
-DATABASE_URL="mysql://root:password@localhost:3306/tech_vibe"
+DATABASE_URL="mysql://root:123@localhost:3306/techh"
 REDIS_URL="redis://localhost:6379"
 JWT_SECRET="super-secret-key"
 INTERNAL_API_KEY="default-internal-secret"
 ```
 
-### 4. Database Setup & Migrations
+### 4. Start Infrastructure
+Before running migrations, start the required MySQL and Redis instances using Docker:
+```bash
+pnpm start
+```
+This will run the containers in the background as defined in `docker/docker-compose.yml`.
+
+### 5. Database Setup & Migrations
 Synchronize the Prisma schema with your MySQL database. 
 *Note: We use `prisma db push` for this local development stage.*
 ```bash
@@ -93,15 +100,15 @@ pnpm --filter @tech-vibe/database exec prisma db push
 ```
 This command will create all the necessary tables (Orders, Products, TLater Loans, Ledgers, etc.) and generate the Prisma Client.
 
-*(Optional)* If you already have the SQL dump (`tech_vibe_core_v2.sql`), you can import it into your MySQL client first.
+*(Optional)* If you already have the SQL dump (`db.sql`), you can import it into your MySQL client first.
 
-### 5. Build the Project
+### 6. Build the Project
 Build all packages and microservices using Turborepo:
 ```bash
 pnpm build
 ```
 
-### 6. Run the Application
+### 7. Run the Application
 Start all microservices concurrently in development mode:
 ```bash
 pnpm dev
