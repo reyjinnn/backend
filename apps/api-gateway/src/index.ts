@@ -9,6 +9,8 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
+import cookie from "@fastify/cookie";
+import csrfProtection from "@fastify/csrf-protection";
 import { logger } from "@tech-vibe/logger";
 
 const buildServer = async () => {
@@ -19,7 +21,7 @@ const buildServer = async () => {
 
   await server.register(helmet, {
     global: true,
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: true,
   });
 
   const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -36,23 +38,62 @@ const buildServer = async () => {
   });
 
   await server.register(jwt, {
-    secret: process.env.JWT_SECRET || 'supersecret'
+    secret: process.env.JWT_SECRET || 'supersecret',
+    cookie: {
+      cookieName: 'accessToken',
+      signed: false
+    }
+  });
+
+  await server.register(cookie);
+  await server.register(csrfProtection, { cookieOpts: { signed: false } });
+
+  server.get("/api/v1/csrf", async (request, reply) => {
+    const token = await reply.generateCsrf();
+    return { csrfToken: token };
+  });
+
+  server.addHook('onRequest', async (request, reply) => {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
+      if (request.url.startsWith('/api/v1/auth/login') || request.url.startsWith('/api/v1/auth/register')) {
+        return;
+      }
+      
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        return;
+      }
+
+      try {
+        // @ts-ignore
+        await server.csrfProtection(request, reply);
+      } catch (err) {
+        return reply.code(403).send({ success: false, message: 'Invalid CSRF token' });
+      }
+    }
   });
 
   server.addHook('onRequest', async (request, reply) => {
     if (!request.url.startsWith('/api/v1/')) return;
     
-    if (request.url.startsWith('/api/v1/auth/')) return;
+    if (request.url.startsWith('/api/v1/auth/') && request.url !== '/api/v1/auth/logout') return;
+
+    let token = null;
 
     const authHeader = request.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (request.cookies && request.cookies.accessToken) {
+      token = request.cookies.accessToken;
+    }
+
+    if (token) {
       try {
-        const token = authHeader.split(' ')[1];
         if (token === 'user-1-token') {
           request.headers['x-user-id'] = '1';
           request.headers['x-user-role'] = 'customer';
         } else {
-          const decoded = await request.jwtVerify() as any;
+          const decoded = server.jwt.verify(token) as any;
           request.headers['x-user-id'] = decoded.id.toString();
           request.headers['x-user-role'] = decoded.role;
         }

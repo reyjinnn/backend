@@ -65,6 +65,20 @@ export const buildServer = async () => {
   server.register(ticketRoutes, { prefix: "/api/v1" });
   server.register(notificationRoutes, { prefix: "/api/v1" });
 
+  server.setErrorHandler((error: any, request, reply) => {
+    if (error.validation) {
+      return reply.status(400).send({
+        success: false,
+        message: `Validation Error: ${error.message}`,
+      });
+    }
+    logger.error(error);
+    return reply.status(error.statusCode || 500).send({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  });
+
   return server;
 };
 
